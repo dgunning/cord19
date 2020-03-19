@@ -23,5 +23,6 @@ setup(
     url='https://github.com/dgunning/cord19.git',
     license=license,
     packages=['cord'],
-    install_requires=REQUIRED
+    install_requires=REQUIRED,
+    include_package_data=True
 )

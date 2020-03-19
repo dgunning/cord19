@@ -1,5 +1,6 @@
 data/CORD-19-research-challenge/
 data/CORD-19-research-challenge.zip
+data/*.pickle
 .idea/
 **/__pycache__/
 .ipynb_checkpoints/
