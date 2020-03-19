@@ -1,2 +1,2 @@
 <h3>Search Results</h3>
-{{search_results}}
+{{search_results._repr_html_()}}
