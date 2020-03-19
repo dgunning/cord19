@@ -1,10 +1,10 @@
-import concurrent
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from types import SimpleNamespace
 from typing import Collection, Any
 from tqdm import tqdm_notebook as tqdm
 import time
+import multiprocessing
+
 
 def num_cpus() -> int:
     "Get number of cpus"
@@ -18,13 +18,10 @@ def ifnone(a: Any, b: Any) -> Any:
     "`a` if `a` is not None, otherwise `b`."
     return b if a is None else a
 
-_default_cpus = min(16, num_cpus())
-defaults = SimpleNamespace(cpus=_default_cpus, cmap='viridis', return_fig=False, silent=False)
-
 
 def parallel(func, arr: Collection, max_workers: int = None, leave=False):
     "Call `func` on every element of `arr` in parallel using `max_workers`."
-    max_workers = ifnone(max_workers, defaults.cpus)
+    max_workers = ifnone(max_workers, multiprocessing.cpu_count())
     progress_bar = tqdm(arr)
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         futures_to_index = {ex.submit(func, o):i for i, o in enumerate(arr)}
@@ -37,3 +34,7 @@ def parallel(func, arr: Collection, max_workers: int = None, leave=False):
             progress_bar.update()
         results.sort(key=lambda x: x[0])
     return [result for i, result in results]
+
+
+def add(cat1, cat2):
+    return cat1 + cat2
