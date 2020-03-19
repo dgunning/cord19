@@ -9,12 +9,14 @@ import pandas as pd
 import requests
 from requests import HTTPError
 import ipywidgets as widgets
-from cord.core import parallel, ifnone, add
-
+from cord.core import parallel, ifnone, add, render_html
+from IPython.display import display
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
 from nltk.corpus import stopwords
 english_stopwords = list(set(stopwords.words('english')))
+import pickle
+from pathlib import Path, PurePath
 
 
 class Author:
@@ -78,9 +80,6 @@ class JCatalog:
         return JCatalog(self.papers + o.papers)
 
 
-
-
-
 def tokenize(text):
     words = nltk.word_tokenize(text)
     return list(set([word for word in words if word.isalnum()
@@ -106,8 +105,8 @@ def get(url, timeout=6):
         print('Got http error', r.status, r.text)
 
 
-DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_full_text']
-
+_DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_full_text']
+_RESEARCH_PAPERS_SAVE_FILE = 'ResearchPapers.pickle'
 
 class ResearchPapers:
 
@@ -117,6 +116,7 @@ class ResearchPapers:
         print('Building a BM25 index')
         index_tokens = self._create_index_tokens()
         self.bm25 = BM25Okapi(index_tokens.tolist())
+        self.num_results = 10
         gc.collect()
 
     def __getitem__(self, item):
@@ -172,6 +172,29 @@ class ResearchPapers:
         json_catalog = reduce(add, catalogs)
         return cls(metadata, json_catalog)
 
+    @classmethod
+    def from_paths(cls, data_dir='data'):
+        data_path = Path(data_dir) / 'CORD-19-research-challenge/2020-03-13'
+        biorxiv = data_path / 'biorxiv_medrxiv/biorxiv_medrxiv'
+        comm_use = data_path / 'comm_use_subset/comm_use_subset'
+        noncomm_use = data_path / 'noncomm_use_subset/noncomm_use_subset'
+        pmc_custom_license = data_path / 'pmc_custom_license/pmc_custom_license'
+        metadata_path = PurePath(data_path) / 'all_sources_metadata_2020-03-13.csv'
+        return cls.load(metadata_path,
+                        json_paths=[biorxiv, comm_use, noncomm_use, pmc_custom_license])
+
+    @staticmethod
+    def from_pickle(save_dir='data'):
+        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
+        with open(save_path, 'rb') as f:
+            return pickle.load(f)
+
+    def save(self, save_dir='data'):
+        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
+        print('Saving to', save_path)
+        with open(save_path, 'wb') as f:
+            pickle.dump(self, f)
+
     def _create_index_tokens(self):
         abstracts = self.metadata[['sha', 'abstract']]
         json_abstracts = self.json_catalog \
@@ -192,6 +215,15 @@ class ResearchPapers:
         results['Score'] = doc_scores[ind]
         results = results[results.Score > 0].copy()
         return SearchResults(results)
+
+    def search_papers(self, SearchTerms: str):
+        search_results = self.search(SearchTerms)
+        if len(search_results) > 0:
+            display(search_results)
+        return search_results
+
+    def searchbar(self, search_terms='cruise ship'):
+        return widgets.interactive(self.search_papers, SearchTerms=search_terms)
 
 
 class Paper:
@@ -274,4 +306,4 @@ class SearchResults:
 
     def _repr_html_(self):
         display_cols = [col for col in self.columns if not col == 'sha']
-        return self.results[display_cols]._repr_html_()
+        return render_html('SearchResults', search_results=self.results[display_cols])

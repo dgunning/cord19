@@ -4,6 +4,8 @@ from typing import Collection, Any
 from tqdm import tqdm_notebook as tqdm
 import time
 import multiprocessing
+from jinja2 import Template
+from functools import lru_cache
 
 
 def num_cpus() -> int:
@@ -17,6 +19,19 @@ def num_cpus() -> int:
 def ifnone(a: Any, b: Any) -> Any:
     "`a` if `a` is not None, otherwise `b`."
     return b if a is None else a
+
+
+@lru_cache(maxsize=16)
+def load_template(template):
+    template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    template_file = os.path.join(template_dir, f'{template}.template')
+    with open(template_file, 'r') as f:
+        return Template(f.read())
+
+
+def render_html(template_name, **kwargs):
+    template = load_template(template_name)
+    return template.render(kwargs)
 
 
 def parallel(func, arr: Collection, max_workers: int = None, leave=False):
