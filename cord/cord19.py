@@ -11,12 +11,27 @@ from requests import HTTPError
 import ipywidgets as widgets
 from cord.core import parallel, ifnone, add, render_html
 from IPython.display import display
+
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
 from nltk.corpus import stopwords
+
 english_stopwords = list(set(stopwords.words('english')))
 import pickle
 from pathlib import Path, PurePath
+import calendar
+
+months = list(calendar.month_abbr)
+seasons = {'Winter': 'Dec', 'Autumn': 'Sep', 'Spring': 'April', 'Fall': 'Sep', 'Summer': 'June'}
+
+
+def extract_publish_date(dates):
+    year_month = dates.str.extract('(?P<year>\d{4}) ?(?P<month>\w+)?')
+    has_month = ~year_month.month.isnull()
+    year_month.loc[has_month, 'month'] = year_month.loc[has_month, 'month'] \
+                    .replace(seasons).apply(lambda m: str(months.index(m[:3])).zfill(2))
+    year_month.month = year_month.month.fillna('01').apply(str)
+    return year_month.year + '-' + year_month.month
 
 
 class Author:
@@ -108,6 +123,7 @@ def get(url, timeout=6):
 _DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_full_text']
 _RESEARCH_PAPERS_SAVE_FILE = 'ResearchPapers.pickle'
 
+
 class ResearchPapers:
 
     def __init__(self, metadata, json_catalog):
@@ -149,9 +165,10 @@ class ResearchPapers:
     def _repr_html_(self):
         return self.metadata._repr_html_()
 
-    @classmethod
-    def load(cls, metadata_path, json_paths: List):
-        print('Loading the metadata from', metadata_path)
+    @staticmethod
+    def load_metadata(data_dir='data'):
+        data_path = Path(data_dir) / 'CORD-19-research-challenge/2020-03-13'
+        metadata_path = PurePath(data_path) / 'all_sources_metadata_2020-03-13.csv'
         metadata = pd.read_csv(metadata_path,
                                dtype={'Microsoft Academic Paper ID': str,
                                       'pubmed_id': str})
@@ -168,20 +185,26 @@ class ResearchPapers:
                           & (metadata.duplicated(subset=['title', 'abstract']))
         metadata = metadata[~duplicate_paper].reset_index(drop=True)
 
-        catalogs = [JCatalog.load(p) for p in json_paths]
-        json_catalog = reduce(add, catalogs)
-        return cls(metadata, json_catalog)
+        metadata['published'] = extract_publish_date(metadata.publish_time)
+        return metadata.drop(columns=['publish_time'])
 
     @classmethod
-    def from_paths(cls, data_dir='data'):
+    def from_data_dir(cls, data_dir='data'):
         data_path = Path(data_dir) / 'CORD-19-research-challenge/2020-03-13'
+        metadata = cls.load_metadata(data_dir)
+
+        # the Json files
         biorxiv = data_path / 'biorxiv_medrxiv/biorxiv_medrxiv'
         comm_use = data_path / 'comm_use_subset/comm_use_subset'
         noncomm_use = data_path / 'noncomm_use_subset/noncomm_use_subset'
         pmc_custom_license = data_path / 'pmc_custom_license/pmc_custom_license'
-        metadata_path = PurePath(data_path) / 'all_sources_metadata_2020-03-13.csv'
-        return cls.load(metadata_path,
-                        json_paths=[biorxiv, comm_use, noncomm_use, pmc_custom_license])
+
+        json_paths = [biorxiv, comm_use, noncomm_use, pmc_custom_license]
+        catalogs = [JCatalog.load(p) for p in json_paths]
+        # Combine the catalogs into one
+        json_catalog = reduce(add, catalogs)
+
+        return cls(metadata, json_catalog)
 
     @staticmethod
     def from_pickle(save_dir='data'):
@@ -233,7 +256,7 @@ class Paper:
 
     def __init__(self, item, json_paper):
         self.sha = item.sha
-        self.paper = item.to_frame().fillna('')
+        self.paper = item.fillna('').T
         self.paper.columns = ['Value']
         self.json_paper = json_paper
 
