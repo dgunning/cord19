@@ -104,6 +104,8 @@ class ResearchPapers:
         self.json_catalog = json_catalog
         print('Building a BM25 index')
         index_tokens = self._create_index_tokens()
+        self.metadata['antivirals'] = index_tokens.apply(lambda t:
+                                                         ','.join([token for token in t if token.endswith('vir')]))
         self.bm25 = BM25Okapi(index_tokens.tolist())
         self.num_results = 10
         gc.collect()
@@ -208,8 +210,8 @@ class ResearchPapers:
         doc_scores = self.bm25.get_scores(search_terms)
         ind = np.argsort(doc_scores)[::-1][:n]
         results = self.metadata.iloc[ind].copy()
-        results['Score'] = doc_scores[ind]
-        results = results[results.Score > 0].copy()
+        results['Score'] = doc_scores[ind].round(1)
+        results = results[results.Score > 0].reset_index(drop=True)
         return SearchResults(results)
 
     def search_papers(self, SearchTerms: str):
@@ -295,8 +297,7 @@ class SearchResults:
 
     def __init__(self, data: pd.DataFrame):
         self.results = data
-        self.columns = [col for col in ['sha', 'title', 'abstract', 'publish_time',
-                                        'authors', 'Score'] if col in data]
+        self.columns = [col for col in ['sha', 'title','authors',  'published', 'Score'] if col in data]
 
     def __getitem__(self, item):
         return Paper(self.results.loc[item])

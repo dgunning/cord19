@@ -4,3 +4,5 @@ data/*.pickle
 .idea/
 **/__pycache__/
 .ipynb_checkpoints/
+**.egg-info/
+dist/
