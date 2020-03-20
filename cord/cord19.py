@@ -10,8 +10,9 @@ import requests
 from requests import HTTPError
 import ipywidgets as widgets
 from cord.core import parallel, ifnone, add, render_html
+from cord.text import preprocess, extract_publish_date
 from IPython.display import display
-
+import gc
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
 from nltk.corpus import stopwords
@@ -19,20 +20,6 @@ from nltk.corpus import stopwords
 english_stopwords = list(set(stopwords.words('english')))
 import pickle
 from pathlib import Path, PurePath
-import calendar
-
-months = list(calendar.month_abbr)
-seasons = {'Winter': 'Dec', 'Autumn': 'Sep', 'Spring': 'April', 'Fall': 'Sep', 'Summer': 'June'}
-
-
-def extract_publish_date(dates):
-    year_month = dates.str.extract('(?P<year>\d{4}) ?(?P<month>\w+)?')
-    has_month = ~year_month.month.isnull()
-    year_month.loc[has_month, 'month'] = year_month.loc[has_month, 'month'] \
-                    .replace(seasons).apply(lambda m: str(months.index(m[:3])).zfill(2))
-    year_month.month = year_month.month.fillna('01').apply(str)
-    return year_month.year + '-' + year_month.month
-
 
 class Author:
 
@@ -93,20 +80,6 @@ class JCatalog:
 
     def __add__(self, o):
         return JCatalog(self.papers + o.papers)
-
-
-def tokenize(text):
-    words = nltk.word_tokenize(text)
-    return list(set([word for word in words if word.isalnum()
-                     and not word in english_stopwords
-                     and not (word.isnumeric() and len(word) < 4)]))
-
-
-def preprocess(string):
-    return tokenize(string.lower())
-
-
-import gc
 
 
 def get(url, timeout=6):
@@ -227,7 +200,7 @@ class ResearchPapers:
         abs_merged = abstracts.merge(json_abstracts, on='sha', how='left')
         abstract_col = abs_merged.abstract + ' ' + abs_merged.json_abstract
         abstract_col = abstract_col.fillna('')
-        abstract_tokens = abstract_col.str.lower().apply(tokenize)
+        abstract_tokens = abstract_col.apply(preprocess)
         return abstract_tokens
 
     def search(self, search_string, n=10):
