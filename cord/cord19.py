@@ -86,7 +86,7 @@ class JCatalog:
     def __getitem__(self, item):
         if isinstance(item, int):
             return self.papers[item]
-        return self.index.loc[item]
+        return self.index.loc[item].values[0]
 
     def __len__(self):
         return len(self.papers)
@@ -274,16 +274,20 @@ class Paper:
         '''
         Load the paper from doi.org and display as text. Requires Internet to be ON
         '''
-        if self.json_paper:
+        if self.json_paper is not None:
             return self.json_paper.text()
         return get(self.doi())
 
     def abstract(self):
-        if self.json_paper:
-            abstract = self.json_paper.abstract
-            if abstract:
-                return abstract
-        return self.paper.loc['abstract'].values[0]
+        _abstract = self.paper.loc['abstract'].values[0]
+        if _abstract:
+            return _abstract
+        # Take the abstract from the json paper
+        elif self.json_paper:
+            _abstract = self.json_paper.abstract
+            if _abstract:
+                return _abstract
+        return ''
 
     def title(self):
         if self.json_paper:
@@ -311,7 +315,7 @@ class Paper:
         return [a.strip() for a in authors.split(';')]
 
     def _repr_html_(self):
-        return self.paper._repr_html_()
+        return render_html('Paper', paper=self)
 
 
 class SearchResults:

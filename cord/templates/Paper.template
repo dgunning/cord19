@@ -1,0 +1,2 @@
+<h4>{{paper.title()}}</h4>
+<div style="max-height:80px">{{paper.abstract()}}<div>
