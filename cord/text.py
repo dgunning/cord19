@@ -2,6 +2,7 @@ import re
 import nltk
 from nltk.corpus import stopwords
 import calendar
+import numpy as np
 
 english_stopwords = list(set(stopwords.words('english')))
 
@@ -46,3 +47,10 @@ def extract_publish_date(dates):
                     .replace(seasons).apply(lambda m: str(months.index(m[:3])).zfill(2))
     year_month.month = year_month.month.fillna('01').apply(str)
     return year_month.year + '-' + year_month.month
+
+
+def shorten(text, length=200):
+    _len = min(len(text), length)
+    if text:
+        return f'{text[:_len]}...'
+    return ''

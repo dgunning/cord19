@@ -1,18 +1,18 @@
-import numpy as np
+import gc
 import json
 from functools import reduce
-from typing import List
 
+import ipywidgets as widgets
 import nltk
 import numpy as np
 import pandas as pd
 import requests
-from requests import HTTPError
-import ipywidgets as widgets
-from cord.core import parallel, ifnone, add, render_html
-from cord.text import preprocess, extract_publish_date
 from IPython.display import display
-import gc
+from requests import HTTPError
+
+from cord.core import parallel, ifnone, add, render_html
+from cord.text import preprocess, extract_publish_date, shorten
+
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
 from nltk.corpus import stopwords
@@ -20,6 +20,7 @@ from nltk.corpus import stopwords
 english_stopwords = list(set(stopwords.words('english')))
 import pickle
 from pathlib import Path, PurePath
+
 
 class Author:
 
@@ -95,6 +96,7 @@ def get(url, timeout=6):
 
 _DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_full_text']
 _RESEARCH_PAPERS_SAVE_FILE = 'ResearchPapers.pickle'
+_COVID = ['sars-cov-2', '2019-ncov', 'covid-19', 'covid-2019', 'wuhan', 'hubei', 'coronavirus']
 
 
 class ResearchPapers:
@@ -104,8 +106,11 @@ class ResearchPapers:
         self.json_catalog = json_catalog
         print('Building a BM25 index')
         index_tokens = self._create_index_tokens()
+        # Add antiviral column
         self.metadata['antivirals'] = index_tokens.apply(lambda t:
                                                          ','.join([token for token in t if token.endswith('vir')]))
+        # Does it have any covid term?
+        self.metadata['covid_related'] = index_tokens.apply(lambda t: any([covid_term in t for covid_term in _COVID]))
         self.bm25 = BM25Okapi(index_tokens.tolist())
         self.num_results = 10
         gc.collect()
@@ -122,14 +127,18 @@ class ResearchPapers:
             json_paper = self.json_catalog[paper.sha]
         return Paper(paper, json_paper)
 
+    def covid_related(self):
+        _metadata = self.metadata[self.metadata.covid_related].copy()
+        return ResearchPapers(_metadata, self.json_catalog)
+
     def __len__(self):
         return len(self.metadata)
 
     def head(self, n):
-        return ResearchPapers(self.metadata.head(n).copy().reset_index(drop=True))
+        return ResearchPapers(self.metadata.head(n).copy().reset_index(drop=True), self.json_catalog)
 
     def tail(self, n):
-        return ResearchPapers(self.metadata.tail(n).copy().reset_index(drop=True))
+        return ResearchPapers(self.metadata.tail(n).copy().reset_index(drop=True), self.json_catalog)
 
     def abstracts(self):
         return pd.Series([self.__getitem__(i).abstract() for i in range(len(self))])
@@ -154,7 +163,7 @@ class ResearchPapers:
         metadata.doi = metadata.doi.fillna('').apply(doi_url)
 
         # Set the abstract to the paper title if it is null
-        metadata.abstract = metadata.abstract.fillna(metadata.title)
+        metadata.abstract = metadata.abstract.fillna(metadata.title).fillna('')
         # Some papers are duplicated since they were collected from separate sources. Thanks Joerg Rings
         duplicate_paper = ~(metadata.title.isnull() | metadata.abstract.isnull()) \
                           & (metadata.duplicated(subset=['title', 'abstract']))
@@ -200,28 +209,30 @@ class ResearchPapers:
             .fillna('').to_frame(name='json_abstract') \
             .reset_index().rename(columns={'index': 'sha'})
         abs_merged = abstracts.merge(json_abstracts, on='sha', how='left')
-        abstract_col = abs_merged.abstract + ' ' + abs_merged.json_abstract
+        abstract_col = abs_merged.abstract + ' ' + abs_merged.json_abstract.fillna('')
         abstract_col = abstract_col.fillna('')
         abstract_tokens = abstract_col.apply(preprocess)
         return abstract_tokens
 
-    def search(self, search_string, n=10):
+    def search(self, search_string, n_results=None):
+        n_results = n_results or self.num_results
         search_terms = preprocess(search_string)
         doc_scores = self.bm25.get_scores(search_terms)
-        ind = np.argsort(doc_scores)[::-1][:n]
+        ind = np.argsort(doc_scores)[::-1][:n_results]
         results = self.metadata.iloc[ind].copy()
         results['Score'] = doc_scores[ind].round(1)
         results = results[results.Score > 0].reset_index(drop=True)
         return SearchResults(results)
 
-    def search_papers(self, SearchTerms: str):
+    def _search_papers(self, SearchTerms: str):
         search_results = self.search(SearchTerms)
         if len(search_results) > 0:
             display(search_results)
         return search_results
 
-    def searchbar(self, search_terms='cruise ship'):
-        return widgets.interactive(self.search_papers, SearchTerms=search_terms)
+    def searchbar(self, search_terms='cruise ship', num_results=10):
+        self.num_results = num_results
+        return widgets.interactive(self._search_papers, SearchTerms=search_terms)
 
 
 class Paper:
@@ -296,8 +307,9 @@ class Paper:
 class SearchResults:
 
     def __init__(self, data: pd.DataFrame):
-        self.results = data
-        self.columns = [col for col in ['sha', 'title','authors',  'published', 'Score'] if col in data]
+        self.results = data.dropna(subset=['title'])
+        self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
+        self.columns = [col for col in ['sha', 'title', 'authors', 'published', 'Score'] if col in data]
 
     def __getitem__(self, item):
         return Paper(self.results.loc[item])
@@ -305,6 +317,15 @@ class SearchResults:
     def __len__(self):
         return len(self.results)
 
+    def _results_view(self, search_results):
+        return [{'title': rec['title'],
+                 'authors': rec['authors'],
+                 'abstract': shorten(rec['abstract']),
+                 'published': rec['published']
+                 }
+                for rec in search_results.to_dict('records')]
+
     def _repr_html_(self):
+        # search_results=self._results_view(self.results))
         display_cols = [col for col in self.columns if not col == 'sha']
         return render_html('SearchResults', search_results=self.results[display_cols])
