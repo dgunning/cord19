@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 from IPython.display import display
 from requests import HTTPError
-
+import re
 from cord.core import parallel, ifnone, add, render_html
 from cord.text import preprocess, extract_publish_date, shorten
 
@@ -99,12 +99,64 @@ _RESEARCH_PAPERS_SAVE_FILE = 'ResearchPapers.pickle'
 _COVID = ['sars-cov-2', '2019-ncov', 'covid-19', 'covid-2019', 'wuhan', 'hubei', 'coronavirus']
 
 
+# Convert the doi to a url
+def doi_url(d):
+    return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
+
+
+_abstract_terms_ = '(Publisher|Abstract|Summary|BACKGROUND|INTRODUCTION)'
+
+
+# Some titles are is short and unrelated to viruses
+# This regex keeps some short titles if they seem relevant
+_relevant_re_ = '.*vir.*|.*sars.*|.*mers.*|.*corona.*|.*ncov.*|.*immun.*|.*nosocomial.*'
+_relevant_re_ = _relevant_re_ +  '.*epidem.*|.*emerg.*|.*vacc.*|.*cytokine.*'
+
+
+def remove_common_terms(abstract):
+    return re.sub(_abstract_terms_, '', abstract)
+
+
+def start(data):
+    return data.copy()
+
+
+def clean_title(data):
+    # Set junk titles to NAN
+    title_relevant = data.title.fillna('').str.match(_relevant_re_, case=False)
+    title_short = data.title.fillna('').apply(len) < 30
+    title_junk = title_short & ~title_relevant
+    data.loc[title_junk, 'title'] = ''
+    return data
+
+
+def clean_abstract(data):
+    # Set unknowns to NAN
+    abstract_unknown = data.abstract == 'Unknown'
+    data.loc[abstract_unknown, 'abstract'] = np.nan
+
+    # Fill missing abstract with the title
+    data.abstract = data.abstract.fillna(data.title)
+
+    # Remove common terms like publisher
+    data.abstract = data.abstract.fillna('').apply(remove_common_terms)
+
+    return data
+
+
+def clean_metadata(metadata):
+    print('Cleaning metadata')
+    return metadata.pipe(start) \
+                   .pipe(clean_title) \
+                   .pipe(clean_abstract)
+
+
 class ResearchPapers:
 
     def __init__(self, metadata, json_catalog):
         self.metadata = metadata
         self.json_catalog = json_catalog
-        print('Building a BM25 index')
+        print('Indexing research papers')
         index_tokens = self._create_index_tokens()
         # Add antiviral column
         self.metadata['antivirals'] = index_tokens.apply(lambda t:
@@ -114,6 +166,7 @@ class ResearchPapers:
         self.bm25 = BM25Okapi(index_tokens.tolist())
         self.num_results = 10
         gc.collect()
+        print('Indexing complete')
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -151,37 +204,27 @@ class ResearchPapers:
 
     @staticmethod
     def load_metadata(data_dir='data'):
-        data_path = Path(data_dir) / 'CORD-19-research-challenge/2020-03-13'
-        metadata_path = PurePath(data_path) / 'all_sources_metadata_2020-03-13.csv'
+        data_path = Path(data_dir) / 'CORD-19-research-challenge'
+        print('Loading metadata from', data_path)
+        metadata_path = PurePath(data_path) / 'metadata.csv'
         metadata = pd.read_csv(metadata_path,
-                               dtype={'Microsoft Academic Paper ID': str,
-                                      'pubmed_id': str})
-
-        # Convert the doi to a url
-        def doi_url(d): return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
-
-        metadata.doi = metadata.doi.fillna('').apply(doi_url)
-
-        # Set the abstract to the paper title if it is null
-        metadata.abstract = metadata.abstract.fillna(metadata.title).fillna('')
-        # Some papers are duplicated since they were collected from separate sources. Thanks Joerg Rings
-        duplicate_paper = ~(metadata.title.isnull() | metadata.abstract.isnull()) \
-                          & (metadata.duplicated(subset=['title', 'abstract']))
-        metadata = metadata[~duplicate_paper].reset_index(drop=True)
-
+                               dtype={'Microsoft Academic Paper ID': 'category', 'pubmed_id': str,
+                                      'license': 'category', 'source_x': 'category', 'journal': 'category',
+                                      'full_text_file': 'category'})
         metadata['published'] = extract_publish_date(metadata.publish_time)
+        metadata = clean_metadata(metadata)
         return metadata.drop(columns=['publish_time'])
 
     @classmethod
     def from_data_dir(cls, data_dir='data'):
-        data_path = Path(data_dir) / 'CORD-19-research-challenge/2020-03-13'
+        data_path = Path(data_dir) / 'CORD-19-research-challenge'
         metadata = cls.load_metadata(data_dir)
 
         # the Json files
         biorxiv = data_path / 'biorxiv_medrxiv/biorxiv_medrxiv'
         comm_use = data_path / 'comm_use_subset/comm_use_subset'
         noncomm_use = data_path / 'noncomm_use_subset/noncomm_use_subset'
-        pmc_custom_license = data_path / 'pmc_custom_license/pmc_custom_license'
+        pmc_custom_license = data_path / 'custom_license/custom_license'
 
         json_paths = [biorxiv, comm_use, noncomm_use, pmc_custom_license]
         catalogs = [JCatalog.load(p) for p in json_paths]
@@ -235,6 +278,11 @@ class ResearchPapers:
         return widgets.interactive(self._search_papers, SearchTerms=search_terms)
 
 
+# Convert the doi to a url
+def doi_url(d):
+    return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
+
+
 class Paper:
     '''
     A single research paper
@@ -253,8 +301,11 @@ class Paper:
         '''
         Load the paper from doi.org and display as HTML. Requires internet to be ON
         '''
-        text = get(self.doi())
-        return widgets.HTML(text)
+        doi = self.doi()
+        if doi:
+            url = doi_url(doi)
+            text = get(url)
+            return widgets.HTML(text)
 
     def text(self):
         '''
