@@ -1,0 +1,1 @@
+https://www.globalhealthnow.org/2020-03/covid-19s-stop-gap-solution-until-vaccines-and-antivirals-are-ready

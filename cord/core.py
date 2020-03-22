@@ -79,7 +79,7 @@ def describe_column(series):
     return df
 
 
-def describe_columns(df, columns=None):
+def describe_dataframe(df, columns=None):
     columns = columns or df.columns
     column_descs = [describe_column(df[col]).T for col in columns]
     return pd.concat(column_descs)

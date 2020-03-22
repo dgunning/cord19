@@ -12,6 +12,7 @@ from requests import HTTPError
 import re
 from cord.core import parallel, ifnone, add, render_html
 from cord.text import preprocess, extract_publish_date, shorten
+from cord.dates import fix_dates, add_date_diff
 
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
@@ -153,7 +154,9 @@ def clean_metadata(metadata):
     print('Cleaning metadata')
     return metadata.pipe(start) \
                    .pipe(clean_title) \
-                   .pipe(clean_abstract)
+                   .pipe(clean_abstract) \
+                   .pipe(fix_dates) \
+                   .pipe(add_date_diff)
 
 
 class ResearchPapers:
@@ -204,16 +207,15 @@ class ResearchPapers:
         return self.metadata._repr_html_()
 
     @staticmethod
-    def load_metadata(data_path):
+    def load_metadata(data_path=Path('data') / CORD_CHALLENGE_PATH):
         print('Loading metadata from', data_path)
         metadata_path = PurePath(data_path) / 'metadata.csv'
         metadata = pd.read_csv(metadata_path,
-                               dtype={'Microsoft Academic Paper ID': 'category', 'pubmed_id': str,
-                                      'license': 'category', 'source_x': 'category', 'journal': 'category',
-                                      'full_text_file': 'category'})
-        metadata['published'] = extract_publish_date(metadata.publish_time)
+                               dtype={'Microsoft Academic Paper ID': 'str', 'pubmed_id': str})
+        # category_dict = {'license': 'category', 'source_x': 'category',
+        #                 'journal': 'category', 'full_text_file': 'category'}
         metadata = clean_metadata(metadata)
-        return metadata.drop(columns=['publish_time'])
+        return metadata
 
     @classmethod
     def from_data_dir(cls, data_dir='data'):
@@ -281,7 +283,7 @@ class Paper:
 
     def __init__(self, item, data_path):
         self.sha = item.sha
-        self.paper = item.fillna('').T
+        self.paper = item.T
         self.paper.columns = ['Value']
         self.data_path = data_path
 
@@ -307,13 +309,13 @@ class Paper:
         return get(self.doi())
 
     def abstract(self):
-        _abstract = self.paper.loc['abstract']
+        _abstract = self.paper.loc['abstract'].values[0]
         if _abstract:
             return _abstract
         return ''
 
     def title(self):
-        return self.paper.loc['title']
+        return self.paper.loc['title'].values[0]
 
     def has_full_text(self):
         return self.paper.loc['has_full_text']
@@ -348,7 +350,8 @@ class Paper:
         return [a.strip() for a in authors.split(';')]
 
     def _repr_html_(self):
-        return render_html('Paper', paper=self)
+        return self.paper.fillna('')._repr_html_()
+        #return render_html('Paper', paper=self)
 
 
 class SearchResults:
