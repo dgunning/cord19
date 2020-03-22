@@ -1,7 +1,7 @@
 import gc
 import json
-from functools import reduce
-
+from functools import reduce, lru_cache
+import time
 import ipywidgets as widgets
 import nltk
 import numpy as np
@@ -20,6 +20,8 @@ from nltk.corpus import stopwords
 english_stopwords = list(set(stopwords.words('english')))
 import pickle
 from pathlib import Path, PurePath
+
+CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 
 
 class Author:
@@ -41,16 +43,19 @@ class JPaper:
         self.title = paper['metadata']['title']
         self.authors = [Author(a.get('first'), a.get('last'), a.get('middle'))
                         for a in paper['metadata']['authors']]
-        self.sections = [{s['section']: s['text']} for s in paper['body_text']]
+        self.sections = [s['text'] for s in paper['body_text']]
+
+    def get_text(self):
+        return ' \n '.join([t[1] for t in self.sections])
 
     def _repr_html_(self):
-        _html = f'<h4>{self.title}</h4>'
-        return _html
+        return render_html('JPaper', paper=self)
 
     def __repr__(self):
-        return f'{self.title}'
+        return 'JPaper'
 
 
+#@lru_cache(maxsize=2048)
 def load_json(json_file):
     with open(json_file, 'r') as f:
         contents = json.load(f)
@@ -153,10 +158,11 @@ def clean_metadata(metadata):
 
 class ResearchPapers:
 
-    def __init__(self, metadata, json_catalog):
+    def __init__(self, metadata, data_dir='data'):
         self.metadata = metadata
-        self.json_catalog = json_catalog
+        self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
         print('Indexing research papers')
+        tick = time.time()
         index_tokens = self._create_index_tokens()
         # Add antiviral column
         self.metadata['antivirals'] = index_tokens.apply(lambda t:
@@ -165,20 +171,15 @@ class ResearchPapers:
         self.metadata['covid_related'] = index_tokens.apply(lambda t: any([covid_term in t for covid_term in _COVID]))
         self.bm25 = BM25Okapi(index_tokens.tolist())
         self.num_results = 10
-        gc.collect()
-        print('Indexing complete')
+        tock = time.time()
+        print('Finished Indexing in', round(tock - tick, 0), 'seconds')
 
     def __getitem__(self, item):
         if isinstance(item, int):
             paper = self.metadata.iloc[item]
         else:
             paper = self.metadata[self.metadata.sha == item]
-        # Look up for the corresponding json paper if it exists
-        if isinstance(paper.sha, float) and np.isnan(paper.sha):
-            json_paper = None  # No sha on the metadata row
-        else:
-            json_paper = self.json_catalog[paper.sha]
-        return Paper(paper, json_paper)
+        return Paper(paper, self.data_path)
 
     def covid_related(self):
         _metadata = self.metadata[self.metadata.covid_related].copy()
@@ -203,8 +204,7 @@ class ResearchPapers:
         return self.metadata._repr_html_()
 
     @staticmethod
-    def load_metadata(data_dir='data'):
-        data_path = Path(data_dir) / 'CORD-19-research-challenge'
+    def load_metadata(data_path):
         print('Loading metadata from', data_path)
         metadata_path = PurePath(data_path) / 'metadata.csv'
         metadata = pd.read_csv(metadata_path,
@@ -218,20 +218,8 @@ class ResearchPapers:
     @classmethod
     def from_data_dir(cls, data_dir='data'):
         data_path = Path(data_dir) / 'CORD-19-research-challenge'
-        metadata = cls.load_metadata(data_dir)
-
-        # the Json files
-        biorxiv = data_path / 'biorxiv_medrxiv/biorxiv_medrxiv'
-        comm_use = data_path / 'comm_use_subset/comm_use_subset'
-        noncomm_use = data_path / 'noncomm_use_subset/noncomm_use_subset'
-        pmc_custom_license = data_path / 'custom_license/custom_license'
-
-        json_paths = [biorxiv, comm_use, noncomm_use, pmc_custom_license]
-        catalogs = [JCatalog.load(p) for p in json_paths]
-        # Combine the catalogs into one
-        json_catalog = reduce(add, catalogs)
-
-        return cls(metadata, json_catalog)
+        metadata = cls.load_metadata(data_path)
+        return cls(metadata, data_dir)
 
     @staticmethod
     def from_pickle(save_dir='data'):
@@ -246,6 +234,7 @@ class ResearchPapers:
             pickle.dump(self, f)
 
     def _create_index_tokens(self):
+        '''
         abstracts = self.metadata[['sha', 'abstract']]
         json_abstracts = self.json_catalog \
             .index.apply(lambda p: p.abstract) \
@@ -254,7 +243,9 @@ class ResearchPapers:
         abs_merged = abstracts.merge(json_abstracts, on='sha', how='left')
         abstract_col = abs_merged.abstract + ' ' + abs_merged.json_abstract.fillna('')
         abstract_col = abstract_col.fillna('')
-        abstract_tokens = abstract_col.apply(preprocess)
+
+        '''
+        abstract_tokens = self.metadata.abstract.apply(preprocess)
         return abstract_tokens
 
     def search(self, search_string, n_results=None):
@@ -265,7 +256,7 @@ class ResearchPapers:
         results = self.metadata.iloc[ind].copy()
         results['Score'] = doc_scores[ind].round(1)
         results = results[results.Score > 0].reset_index(drop=True)
-        return SearchResults(results)
+        return SearchResults(results, self.data_path)
 
     def _search_papers(self, SearchTerms: str):
         search_results = self.search(SearchTerms)
@@ -288,11 +279,11 @@ class Paper:
     A single research paper
     '''
 
-    def __init__(self, item, json_paper):
+    def __init__(self, item, data_path):
         self.sha = item.sha
         self.paper = item.fillna('').T
         self.paper.columns = ['Value']
-        self.json_paper = json_paper
+        self.data_path = data_path
 
     def doi(self):
         return self.paper.loc['doi'].values[0]
@@ -316,22 +307,27 @@ class Paper:
         return get(self.doi())
 
     def abstract(self):
-        _abstract = self.paper.loc['abstract'].values[0]
+        _abstract = self.paper.loc['abstract']
         if _abstract:
             return _abstract
-        # Take the abstract from the json paper
-        elif self.json_paper:
-            _abstract = self.json_paper.abstract
-            if _abstract:
-                return _abstract
         return ''
 
     def title(self):
-        if self.json_paper:
-            title = self.json_paper.title
-            if title:
-                return title
-        return self.paper.loc['title'].values[0]
+        return self.paper.loc['title']
+
+    def has_full_text(self):
+        return self.paper.loc['has_full_text']
+
+    def full_text_path(self):
+        if self.has_full_text():
+            text_file = self.paper.loc['full_text_file']
+            text_path = self.data_path / text_file / text_file / f'{self.sha}.json'
+            return text_path
+
+    def get_json_paper(self):
+        text_path = self.full_text_path()
+        if text_path:
+            return load_json(str(text_path.resolve()))
 
     def authors(self, split=False):
         if self.json_paper:
@@ -357,13 +353,14 @@ class Paper:
 
 class SearchResults:
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, data_path):
+        self.data_path = data_path
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.columns = [col for col in ['sha', 'title', 'authors', 'published', 'Score'] if col in data]
 
     def __getitem__(self, item):
-        return Paper(self.results.loc[item])
+        return Paper(self.results.loc[item], self.data_path)
 
     def __len__(self):
         return len(self.results)
