@@ -10,7 +10,7 @@ import requests
 from IPython.display import display
 from requests import HTTPError
 import re
-from cord.core import parallel, ifnone, add, render_html
+from cord.core import parallel, ifnone, add, render_html, show_common
 from cord.text import preprocess, extract_publish_date, shorten
 from cord.dates import fix_dates, add_date_diff
 
@@ -23,7 +23,8 @@ import pickle
 from pathlib import Path, PurePath
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
-
+SARS_DATE = '2002-11-01'
+SARS_COV_2_DATE = '2019-11-01'
 
 class Author:
 
@@ -147,6 +148,11 @@ def clean_abstract(data):
     # Remove common terms like publisher
     data.abstract = data.abstract.fillna('').apply(remove_common_terms)
 
+    # Remove the abstract if it is too common
+    common_abstracts = show_common(data, 'abstract').query('abstract > 2') \
+                            .reset_index().query('~(index =="")')['index'].tolist()
+    data.loc[data.abstract.isin(common_abstracts),'abstract'] = ''
+
     return data
 
 
@@ -156,7 +162,7 @@ def drop_missing(data):
               (data.title == '') & \
               (data.abstract == '')
               #(data.has_text.isnull() | ~data.has_text)
-    return data[~missing].reset_index()
+    return data[~missing].reset_index(drop=True)
 
 
 def clean_metadata(metadata):
@@ -195,7 +201,6 @@ class ResearchPapers:
             tock = time.time()
             print('Finished Indexing in', round(tock - tick, 0), 'seconds')
         else:
-            print('Creating a new ResearchPapers instance from an old one')
             self.metadata = metadata
             self.bm25 = BM25Okapi(index_tokens.tolist())
             self.index_tokens = index_tokens
@@ -242,6 +247,18 @@ class ResearchPapers:
     def query(self, query):
         data = self.metadata.query(query)
         return self._make_copy(data)
+
+    def after(self, date, include_null_dates=False):
+        cond = self.metadata.published >= date
+        if include_null_dates:
+            cond = cond | self.metadata.published.isnull()
+        return self._make_copy(self.metadata[cond])
+
+    def since_sars(self, include_null_dates=False):
+        return self.after(SARS_DATE, include_null_dates)
+
+    def since_sarscov2(self, include_null_dates=False):
+        return self.after(SARS_COV_2_DATE, include_null_dates)
 
     def with_fill_text(self):
         return self.query('has_text')
