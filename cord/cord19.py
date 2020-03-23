@@ -100,7 +100,7 @@ def get(url, timeout=6):
         print('Got http error', r.status, r.text)
 
 
-_DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_full_text']
+_DISPLAY_COLS = ['sha', 'title', 'abstract', 'publish_time', 'authors', 'has_text']
 _RESEARCH_PAPERS_SAVE_FILE = 'ResearchPapers.pickle'
 _COVID = ['sars-cov-2', '2019-ncov', 'covid-19', 'covid-2019', 'wuhan', 'hubei', 'coronavirus']
 
@@ -150,20 +150,57 @@ def clean_abstract(data):
     return data
 
 
+def drop_missing(data):
+    missing = (data.published.isnull()) & \
+              (data.sha.isnull()) & \
+              (data.title == '') & \
+              (data.abstract == '')
+              #(data.has_text.isnull() | ~data.has_text)
+    return data[~missing].reset_index()
+
+
 def clean_metadata(metadata):
     print('Cleaning metadata')
     return metadata.pipe(start) \
                    .pipe(clean_title) \
                    .pipe(clean_abstract) \
                    .pipe(fix_dates) \
-                   .pipe(add_date_diff)
+                   .pipe(add_date_diff) \
+                   .pipe(drop_missing)
+
+
+def get_json_path(data_path, text_path, sha):
+    return Path(data_path) / text_path / text_path / f'{sha}.json'
 
 
 class ResearchPapers:
 
-    def __init__(self, metadata, data_dir='data'):
-        self.metadata = metadata
+    def __init__(self, metadata, data_dir='data', index_tokens=None):
         self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
+
+        self.num_results = 10
+        if index_tokens is None:
+            self.metadata = metadata
+            print('Indexing research papers')
+            tick = time.time()
+            index_tokens = self._create_index_tokens()
+            # Add antiviral column
+            self.metadata['antivirals'] = index_tokens.apply(lambda t:
+                                                             ','.join([token for token in t if token.endswith('vir')]))
+            # Does it have any covid term?
+            self.metadata['covid_related'] = index_tokens.apply(
+                lambda t: any([covid_term in t for covid_term in _COVID]))
+            self.bm25 = BM25Okapi(index_tokens.tolist())
+            self.index_tokens = index_tokens
+            tock = time.time()
+            print('Finished Indexing in', round(tock - tick, 0), 'seconds')
+        else:
+            print('Creating a new ResearchPapers instance from an old one')
+            self.metadata = metadata
+            self.bm25 = BM25Okapi(index_tokens.tolist())
+            self.index_tokens = index_tokens
+
+    def create_document_index(self):
         print('Indexing research papers')
         tick = time.time()
         index_tokens = self._create_index_tokens()
@@ -173,9 +210,13 @@ class ResearchPapers:
         # Does it have any covid term?
         self.metadata['covid_related'] = index_tokens.apply(lambda t: any([covid_term in t for covid_term in _COVID]))
         self.bm25 = BM25Okapi(index_tokens.tolist())
-        self.num_results = 10
         tock = time.time()
         print('Finished Indexing in', round(tock - tick, 0), 'seconds')
+
+    def get_json_paths(self):
+        return self.metadata.apply(lambda d:
+                                   np.nan if not d.has_text else get_json_path(self.data_path, d.full_text_file, d.sha),
+                                   axis=1)
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -191,11 +232,25 @@ class ResearchPapers:
     def __len__(self):
         return len(self.metadata)
 
+    def _make_copy(self, new_data):
+        _index = new_data.index
+        new_tokens = self.index_tokens.loc[_index]
+        return ResearchPapers(metadata=new_data.copy(),
+                              data_dir=self.data_path,
+                              index_tokens=new_tokens)
+
+    def query(self, query):
+        data = self.metadata.query(query)
+        return self._make_copy(data)
+
+    def with_fill_text(self):
+        return self.query('has_text')
+
     def head(self, n):
-        return ResearchPapers(self.metadata.head(n).copy().reset_index(drop=True), self.json_catalog)
+        return self._make_copy(self.metadata.head(n))
 
     def tail(self, n):
-        return ResearchPapers(self.metadata.tail(n).copy().reset_index(drop=True), self.json_catalog)
+        return self._make_copy(self.metadata.tail(n).copy())
 
     def abstracts(self):
         return pd.Series([self.__getitem__(i).abstract() for i in range(len(self))])
@@ -204,14 +259,17 @@ class ResearchPapers:
         return pd.Series([self.__getitem__(i).title() for i in range(len(self))])
 
     def _repr_html_(self):
-        return self.metadata._repr_html_()
+        display_cols = ['title', 'abstract', 'journal', 'source', 'authors',
+                        'has_text', 'published', 'when']
+        return self.metadata[display_cols]._repr_html_()
 
     @staticmethod
     def load_metadata(data_path=Path('data') / CORD_CHALLENGE_PATH):
         print('Loading metadata from', data_path)
         metadata_path = PurePath(data_path) / 'metadata.csv'
-        metadata = pd.read_csv(metadata_path,
-                               dtype={'Microsoft Academic Paper ID': 'str', 'pubmed_id': str})
+        dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
+        renames = {'source_x': 'source', 'has_full_text': 'has_text'}
+        metadata = pd.read_csv(metadata_path, dtype=dtypes).rename(columns=renames)
         # category_dict = {'license': 'category', 'source_x': 'category',
         #                 'journal': 'category', 'full_text_file': 'category'}
         metadata = clean_metadata(metadata)
@@ -236,21 +294,13 @@ class ResearchPapers:
             pickle.dump(self, f)
 
     def _create_index_tokens(self):
-        '''
-        abstracts = self.metadata[['sha', 'abstract']]
-        json_abstracts = self.json_catalog \
-            .index.apply(lambda p: p.abstract) \
-            .fillna('').to_frame(name='json_abstract') \
-            .reset_index().rename(columns={'index': 'sha'})
-        abs_merged = abstracts.merge(json_abstracts, on='sha', how='left')
-        abstract_col = abs_merged.abstract + ' ' + abs_merged.json_abstract.fillna('')
-        abstract_col = abstract_col.fillna('')
-
-        '''
         abstract_tokens = self.metadata.abstract.apply(preprocess)
         return abstract_tokens
 
     def search(self, search_string, n_results=None):
+        if not self.bm25:
+            self.create_document_index()
+
         n_results = n_results or self.num_results
         search_terms = preprocess(search_string)
         doc_scores = self.bm25.get_scores(search_terms)
@@ -317,11 +367,11 @@ class Paper:
     def title(self):
         return self.paper.loc['title'].values[0]
 
-    def has_full_text(self):
-        return self.paper.loc['has_full_text']
+    def has_text(self):
+        return self.paper.loc['has_text']
 
     def full_text_path(self):
-        if self.has_full_text():
+        if self.has_text():
             text_file = self.paper.loc['full_text_file']
             text_path = self.data_path / text_file / text_file / f'{self.sha}.json'
             return text_path

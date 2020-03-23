@@ -79,11 +79,11 @@ def date_diff(date):
     return diff
 
 
-def fix_dates(data, old_date_column='publish_time', new_date_column='publish_date'):
+def fix_dates(data, old_date_column='publish_time', new_date_column='published'):
     data[new_date_column] = repair_date(data[old_date_column])
     return data.drop(columns=[old_date_column])
 
 
-def add_date_diff(data, date_column='publish_date', new_column='date_diff'):
+def add_date_diff(data, date_column='published', new_column='when'):
     data[new_column] = data[date_column].apply(date_diff)
     return data
