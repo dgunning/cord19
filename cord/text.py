@@ -8,7 +8,7 @@ english_stopwords = list(set(stopwords.words('english')))
 
 
 def replace_punctuation(text):
-    t = re.sub('\(|\)|:|,|;|\.|’|”|“|\?|%|>|<', '', text)
+    t = re.sub('\(|\)|:|,|;|\.|’|”|“|\?|%|>|<|≥|≤|~', '', text)
     t = re.sub('/', ' ', t)
     t = t.replace("'", '')
     return t
@@ -22,18 +22,18 @@ def clean(text):
 
 def tokenize(text):
     words = nltk.word_tokenize(text)
-    return list(set([word for word in words
+    return [word for word in words
                      if len(word) > 1
                      and not word in english_stopwords
                      and not (word.isnumeric() and len(word) is not 4)
-                     and (not word.isnumeric() or word.isalpha())])
-                )
+                     and (not word.isnumeric() or word.isalpha())]
 
 
 def preprocess(text):
     t = clean(text)
     tokens = tokenize(t)
-    return tokens
+    unique_tokens = list(set(tokens))
+    return unique_tokens
 
 
 months = list(calendar.month_abbr)

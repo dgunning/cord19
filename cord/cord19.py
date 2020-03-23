@@ -24,7 +24,8 @@ from pathlib import Path, PurePath
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 SARS_DATE = '2002-11-01'
-SARS_COV_2_DATE = '2019-11-01'
+SARS_COV_2_DATE = '2019-11-30'
+
 
 class Author:
 
@@ -179,6 +180,11 @@ def get_json_path(data_path, text_path, sha):
     return Path(data_path) / text_path / text_path / f'{sha}.json'
 
 
+_COVID_KEYWORDS = {'covid-19': 100, '2019-ncov': 100, 'sars-cov-2': 100, 'sars-cov': 20, 'quarantine': 10,
+                      'outbreak': 10, 'severe': 5, '2019': 10, 'coronavirus': 25, 'novel': 25, 'new': 10,
+                      'china': 5, 'wuhan': 20, 'hubei': 30, 'ace2': 30, 'pneumonia': 10}
+
+
 class ResearchPapers:
 
     def __init__(self, metadata, data_dir='data', index_tokens=None):
@@ -195,7 +201,7 @@ class ResearchPapers:
                                                              ','.join([token for token in t if token.endswith('vir')]))
             # Does it have any covid term?
             self.metadata['covid_related'] = index_tokens.apply(
-                lambda t: any([covid_term in t for covid_term in _COVID]))
+                lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens if token in _COVID_KEYWORDS]) > 50)
             self.bm25 = BM25Okapi(index_tokens.tolist())
             self.index_tokens = index_tokens
             tock = time.time()
@@ -231,8 +237,10 @@ class ResearchPapers:
         return Paper(paper, self.data_path)
 
     def covid_related(self):
-        _metadata = self.metadata[self.metadata.covid_related].copy()
-        return ResearchPapers(_metadata, self.json_catalog)
+        return self.query('covid_related')
+
+    def not_covid_related(self):
+        return self.query('~covid_related')
 
     def __len__(self):
         return len(self.metadata)
@@ -254,11 +262,23 @@ class ResearchPapers:
             cond = cond | self.metadata.published.isnull()
         return self._make_copy(self.metadata[cond])
 
+    def before(self, date, include_null_dates=False):
+        cond = self.metadata.published < date
+        if include_null_dates:
+            cond = cond | self.metadata.published.isnull()
+        return self._make_copy(self.metadata[cond])
+
     def since_sars(self, include_null_dates=False):
         return self.after(SARS_DATE, include_null_dates)
 
+    def before_sars(self, include_null_dates=False):
+        return self.before(SARS_DATE, include_null_dates)
+
     def since_sarscov2(self, include_null_dates=False):
         return self.after(SARS_COV_2_DATE, include_null_dates)
+
+    def before_sarscov2(self, include_null_dates=False):
+        return self.before(SARS_COV_2_DATE, include_null_dates)
 
     def with_fill_text(self):
         return self.query('has_text')
@@ -417,7 +437,7 @@ class Paper:
         return [a.strip() for a in authors.split(';')]
 
     def _repr_html_(self):
-        return self.paper.fillna('')._repr_html_()
+        return self.paper.fillna('').to_frame()._repr_html_()
         #return render_html('Paper', paper=self)
 
 
@@ -427,7 +447,7 @@ class SearchResults:
         self.data_path = data_path
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
-        self.columns = [col for col in ['sha', 'title', 'authors', 'published', 'Score'] if col in data]
+        self.columns = [col for col in ['sha', 'title', 'authors', 'when', 'Score'] if col in data]
 
     def __getitem__(self, item):
         return Paper(self.results.loc[item], self.data_path)
