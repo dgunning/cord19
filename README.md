@@ -23,3 +23,4 @@ research_papers = ResearchPapers.from_data_dir(data_dir)
 ```{python}
 research_papers.searchbar('vaccine transmission')
 ```
+![Cord Searchbar](images/searchbar.png)
