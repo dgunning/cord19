@@ -35,7 +35,7 @@ def ifnone(a: Any, b: Any) -> Any:
     return b if a is None else a
 
 
-@lru_cache(maxsize=16)
+#@lru_cache(maxsize=16)
 def load_template(template):
     template_dir = os.path.join(os.path.dirname(__file__), 'templates')
     template_file = os.path.join(template_dir, f'{template}.template')

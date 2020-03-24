@@ -280,7 +280,7 @@ class ResearchPapers:
     def before_sarscov2(self, include_null_dates=False):
         return self.before(SARS_COV_2_DATE, include_null_dates)
 
-    def with_fill_text(self):
+    def with_text(self):
         return self.query('has_text')
 
     def head(self, n):
@@ -485,12 +485,13 @@ class SearchResults:
     def _results_view(self, search_results):
         return [{'title': rec['title'],
                  'authors': rec['authors'],
-                 'abstract': shorten(rec['abstract']),
-                 'published': rec['published']
+                 'abstract': shorten(rec['abstract'], 300),
+                 'when': rec['when']
                  }
                 for rec in search_results.to_dict('records')]
 
     def _repr_html_(self):
-        # search_results=self._results_view(self.results))
-        display_cols = [col for col in self.columns if not col == 'sha']
-        return render_html('SearchResults', search_results=self.results[display_cols])
+        search_results=self._results_view(self.results)
+        #display_cols = [col for col in self.columns if not col == 'sha']
+        return render_html('SearchResultsHTML',
+                           search_results=search_results)

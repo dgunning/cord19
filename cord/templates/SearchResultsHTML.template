@@ -1,12 +1,17 @@
 <h3>Search Results</h3>
 {% for paper in search_results %}
  <h4>{{paper.title}}</h4>
- <span class='authors'>{{paper.authors}}</span>.<span class='published'>{{paper.published}}</span>
+
+ <span class='authors'>{{paper.authors}}</span><span class='published'>{{paper.when}}</span>
  <div class='abstract'>{{paper.abstract}}</div>
+
 {% endfor %}
+
 <style>
 .authors, .published{
-    padding: 20
+    padding: 12px 10px 0px 0px;
+    margin: 12px 0px 5px;
+    color: #778899;
 }
-div.abstract {max-height : 80px}
+div.abstract {max-height : 80px; margin-top: 10px}
 </style>
