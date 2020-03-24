@@ -18,3 +18,8 @@ data_dir = '..\input'
 
 research_papers = ResearchPapers.from_data_dir(data_dir)
 ```
+
+### Search Bar
+```{python}
+research_papers.searchbar('vaccine transmission')
+```
