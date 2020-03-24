@@ -166,6 +166,11 @@ def drop_missing(data):
     return data[~missing].reset_index(drop=True)
 
 
+def fill_nulls(data):
+    data.authors = data.authors.fillna('')
+    return data
+
+
 def clean_metadata(metadata):
     print('Cleaning metadata')
     return metadata.pipe(start) \
@@ -173,7 +178,8 @@ def clean_metadata(metadata):
                    .pipe(clean_abstract) \
                    .pipe(fix_dates) \
                    .pipe(add_date_diff) \
-                   .pipe(drop_missing)
+                   .pipe(drop_missing) \
+                   .pipe(fill_nulls)
 
 
 def get_json_path(data_path, text_path, sha):
