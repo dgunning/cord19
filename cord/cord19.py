@@ -1,6 +1,6 @@
 import gc
 import json
-from functools import reduce, lru_cache
+from functools import reduce, lru_cache, partial
 import time
 import ipywidgets as widgets
 import nltk
@@ -171,6 +171,7 @@ def drop_missing(data):
 
 def fill_nulls(data):
     data.authors = data.authors.fillna('')
+    data.doi = data.doi.fillna('')
     return data
 
 
@@ -354,14 +355,14 @@ class ResearchPapers:
         return abstract_tokens
 
     def search(self, search_string,
-               n_results=None,
+               num_results=None,
                covid_related=False,
                start_date=None,
                end_date=None):
         if not self.bm25:
             self.create_document_index()
 
-        n_results = n_results or self.num_results
+        n_results = num_results or self.num_results
         search_terms = preprocess(search_string)
         doc_scores = self.bm25.get_scores(search_terms)
 
@@ -406,6 +407,8 @@ class ResearchPapers:
 
 # Convert the doi to a url
 def doi_url(d):
+    if not d:
+        return ''
     return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
 
 
