@@ -111,6 +111,8 @@ _COVID = ['sars-cov-2', '2019-ncov', 'covid-19', 'covid-2019', 'wuhan', 'hubei',
 
 # Convert the doi to a url
 def doi_url(d):
+    if not d:
+        return '#'
     return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
 
 
@@ -491,6 +493,7 @@ class SearchResults:
         self.data_path = data_path
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
+        self.results['url'] = self.results.doi.apply(doi_url)
         self.columns = [col for col in ['sha', 'title', 'authors', 'when', 'Score'] if col in data]
 
     def __getitem__(self, item):
@@ -503,7 +506,8 @@ class SearchResults:
         return [{'title': rec['title'],
                  'authors': rec['authors'],
                  'abstract': shorten(rec['abstract'], 300),
-                 'when': rec['when']
+                 'when': rec['when'],
+                 'url' : rec['url']
                  }
                 for rec in search_results.to_dict('records')]
 

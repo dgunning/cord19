@@ -1,10 +1,9 @@
-<h3>Search Results</h3>
 {% for paper in search_results %}
- <h4>{{paper.title}}</h4>
+ <h4 class='cord'>{{paper.title}}</h4>
 
  <span class='authors'>{{paper.authors}}</span>
  <span class='published'>{{paper.when}}</span>
- <a href='#' target='_new' class='link'>Link</a>
+ <a href='{{paper.url}}' target='_new' class='link'>Link</a>
  <div class='abstract'>{{paper.abstract}}</div>
 
 {% endfor %}
@@ -16,5 +15,6 @@
 }
 .authors { color: #778899;}
 .published {color: #2F4F4F; font-weight: bold; font-size: 0.9em;}
+h2.cord, h3.cord, h4.cord {margin-top: 15px}
 div.abstract {max-height : 80px; margin-top: 10px}
 </style>
