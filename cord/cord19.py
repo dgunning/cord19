@@ -25,6 +25,7 @@ from pathlib import Path, PurePath
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 SARS_DATE = '2002-11-01'
 SARS_COV_2_DATE = '2019-11-30'
+_MINIMUM_SEARCH_SCORE = 2
 
 
 class Author:
@@ -162,7 +163,6 @@ def drop_missing(data):
               (data.sha.isnull()) & \
               (data.title == '') & \
               (data.abstract == '')
-              #(data.has_text.isnull() | ~data.has_text)
     return data[~missing].reset_index(drop=True)
 
 
@@ -334,17 +334,44 @@ class ResearchPapers:
         abstract_tokens = self.metadata.abstract.apply(preprocess)
         return abstract_tokens
 
-    def search(self, search_string, n_results=None):
+    def search(self, search_string,
+               n_results=None,
+               covid_related=False,
+               start_date=None,
+               end_date=None):
         if not self.bm25:
             self.create_document_index()
 
         n_results = n_results or self.num_results
         search_terms = preprocess(search_string)
         doc_scores = self.bm25.get_scores(search_terms)
-        ind = np.argsort(doc_scores)[::-1][:n_results]
+
+        # Get the index from the doc scores
+        ind = np.argsort(doc_scores)[::-1]
         results = self.metadata.iloc[ind].copy()
         results['Score'] = doc_scores[ind].round(1)
-        results = results[results.Score > 0].reset_index(drop=True)
+
+        # Filter covid related
+        if covid_related:
+            results = results[results.covid_related]
+
+        # Filter by dates
+        if start_date:
+            results = results[results.published >= start_date]
+
+        if end_date:
+            results = results[results.published < end_date]
+
+        # Only include results over a minimum threshold
+        results = results[results.Score > _MINIMUM_SEARCH_SCORE]
+
+        # Show only up to n_results
+        results = results.head(n_results)
+
+        # Create the final results
+        results = results.reset_index(drop=True)
+
+        # Return Search Results
         return SearchResults(results, self.data_path)
 
     def _search_papers(self, SearchTerms: str):

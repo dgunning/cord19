@@ -32,8 +32,7 @@ def tokenize(text):
 def preprocess(text):
     t = clean(text)
     tokens = tokenize(t)
-    unique_tokens = list(set(tokens))
-    return unique_tokens
+    return tokens
 
 
 months = list(calendar.month_abbr)
