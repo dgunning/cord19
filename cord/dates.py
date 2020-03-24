@@ -21,12 +21,12 @@ def format_date(date, format):
 
 def repair_date(date_column: pd.Series):
     mdates = date_column.copy().to_frame().fillna('')
-    print("Fixing dates that are a list e.g. ['2020-02-05', '2020-02']")
+    print("Fixing dates that are a list e.g. \"['2020-02-05', '2020-02']\"")
     idx_list = mdates.publish_time.str.match("\[.*")
     mdates.loc[idx_list, 'publish_time'] = mdates.loc[idx_list] \
         .publish_time.apply(lambda d: d[2:12])
 
-    print("Fixing dates with the seasons e.g. 2014 Autumn")
+    print('Fixing dates with the seasons e.g. "2014 Autumn"')
     idx_seasons = mdates.publish_time.str.match('.*(Spring|Summer|Fall|Autumn|Winter)')
     mdates.loc[idx_seasons, 'publish_time'] = mdates.loc[idx_seasons].publish_time \
         .str.replace('Spring', 'Apr 01') \
@@ -35,32 +35,32 @@ def repair_date(date_column: pd.Series):
         .str.replace('Fall', 'Oct 01') \
         .str.replace('Winter', 'Dec 21')
 
-    print("Fix dates like 2016 Nov 9 Jan-Feb")
+    print('Fixing dates like "2016 Nov 9 Jan-Feb"')
     idx_YYYY_MON_DD_extra = mdates.publish_time.str.match('\d{4} \w{3} \d{1,2}.+$')
     mdates.loc[idx_YYYY_MON_DD_extra, 'publish_time'] = \
         mdates.loc[idx_YYYY_MON_DD_extra].publish_time.apply(lambda d: d[:11].strip())
 
-    print("Fix dates like 2012 Jan-Mar")
+    print('Fixing dates like "2012 Jan-Mar"')
     idx_YYYY_MON_MON = mdates.publish_time.str.match('\d{4} \w{3}-\w{3}$')
     mdates.loc[idx_YYYY_MON_MON, 'publish_time'] = \
         mdates.loc[idx_YYYY_MON_MON].publish_time.apply(lambda d: d[:8].strip())
 
-    print("Convert Dates like 2020 Apr 13")
+    print('Converting dates like "2020 Apr 13"')
     idx_YYYY_MON_DD = mdates.publish_time.str.match(YYYY_MON_DD, case=False)
     mdates.loc[idx_YYYY_MON_DD, 'publish_date'] = \
         mdates.loc[idx_YYYY_MON_DD, 'publish_time'].apply(partial(format_date, format='%Y %b %d'))
 
-    print("Converting Dates like 2020 Apr")
+    print('Converting Dates like "2020 Apr"')
     idx_YYYY_MON = mdates.publish_time.str.match(YYYY_MON, case=False)
     mdates.loc[idx_YYYY_MON, 'publish_date'] = \
         mdates.loc[idx_YYYY_MON, 'publish_time'].apply(partial(format_date, format='%Y %b'))
 
-    print("Converting Dates like 2020")
+    print('Converting dates like "2020"')
     idx_YYYY = mdates.publish_time.str.match(YYYY, case=False)
     mdates.loc[idx_YYYY, 'publish_date'] = \
         mdates.loc[idx_YYYY, 'publish_time'].apply(partial(format_date, format='%Y'))
 
-    print("Converting Dates like 2020-01-21")
+    print('Converting Dates like "2020-01-21"')
     idx_YYYY_MM_DD = mdates.publish_time.str.match(YYYY_MM_DD, case=False)
     mdates.loc[idx_YYYY_MM_DD, 'publish_date'] = \
         mdates.loc[idx_YYYY_MM_DD, 'publish_time'].apply(partial(format_date, format='%Y-%m-%d'))

@@ -6,4 +6,5 @@ data/*.pickle
 .ipynb_checkpoints/
 **.egg-info/
 dist/
+build/
 *task.ipynb

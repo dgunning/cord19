@@ -13,6 +13,7 @@ import re
 from cord.core import parallel, ifnone, add, render_html, show_common
 from cord.text import preprocess, extract_publish_date, shorten
 from cord.dates import fix_dates, add_date_diff
+from cord.nlp import get_lda_model, get_top_topic, get_topic_vector
 
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
@@ -210,12 +211,22 @@ class ResearchPapers:
                 lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens if token in _COVID_KEYWORDS]) > 50)
             self.bm25 = BM25Okapi(index_tokens.tolist())
             self.index_tokens = index_tokens
+
             tock = time.time()
             print('Finished Indexing in', round(tock - tick, 0), 'seconds')
         else:
             self.metadata = metadata
             self.bm25 = BM25Okapi(index_tokens.tolist())
             self.index_tokens = index_tokens
+
+    def nlp(self):
+        # Topic model
+        lda_model, dictionary, corpus = get_lda_model(self.index_tokens)
+        print('Assigning LDA topics')
+        topic_vector = self.index_tokens.apply(lambda tokens: get_topic_vector(lda_model, dictionary, tokens))
+        self.metadata['topic_vector'] = topic_vector
+        self.metadata['top_topic'] = topic_vector.apply(np.argmax)
+        return self
 
     def create_document_index(self):
         print('Indexing research papers')

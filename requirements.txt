@@ -5,6 +5,6 @@ bs4
 rank_bm25
 nltk
 tqdm
-streamlit
 pendulum
 pytest
+gensim
