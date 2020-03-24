@@ -3,7 +3,8 @@
 
  <span class='authors'>{{paper.authors}}</span>
  <span class='published'>{{paper.when}}</span>
- <a href='{{paper.url}}' target='_new' class='link'>Link</a>
+ <!-- a href='{{paper.url}}' target='_new' class='link'>Link</a-->
+ <span class='link-text'>{{paper.url}}</span>
  <div class='abstract'>{{paper.abstract}}</div>
 
 {% endfor %}
@@ -17,4 +18,5 @@
 .published {color: #2F4F4F; font-weight: bold; font-size: 0.9em;}
 h2.cord, h3.cord, h4.cord {margin-top: 15px}
 div.abstract {max-height : 80px; margin-top: 10px}
+.link-text {color: #808080; font-size: 0.9em}
 </style>
