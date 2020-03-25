@@ -1,5 +1,6 @@
 import gensim
 from gensim.models.ldamulticore import LdaMulticore
+import numpy as np
 
 
 def get_lda_model(index_tokens, num_topics=6, passes=3):
@@ -24,4 +25,4 @@ def get_topic_vector(lda_model, dictionary, tokens):
     fingerprint = [0] * lda_model.num_topics
     for topic, prob in lda_model[bow]:
         fingerprint[topic] = prob
-    return fingerprint
+    return np.array(fingerprint)

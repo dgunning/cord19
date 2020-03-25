@@ -3,8 +3,8 @@
 
  <span class='authors'>{{paper.authors}}</span>
  <span class='published'>{{paper.when}}</span>
- <!-- a href='{{paper.url}}' target='_new' class='link'>Link</a-->
- <span class='link-text'>{{paper.url}}</span>
+ {% if paper.is_kaggle %}<span class='link-text'>{{paper.url}}</span>
+ {% else %} <a href='{{paper.url}}' target='_new' class='link'>Link</a> {% endif %}
  <div class='abstract'>{{paper.abstract}}</div>
 
 {% endfor %}

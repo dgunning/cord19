@@ -10,7 +10,7 @@ import requests
 from IPython.display import display
 from requests import HTTPError
 import re
-from cord.core import parallel, ifnone, add, render_html, show_common
+from cord.core import parallel, ifnone, add, render_html, show_common, is_kaggle
 from cord.text import preprocess, extract_publish_date, shorten
 from cord.dates import fix_dates, add_date_diff
 from cord.nlp import get_lda_model, get_top_topic, get_topic_vector
@@ -224,12 +224,11 @@ class ResearchPapers:
 
     def nlp(self):
         # Topic model
-        lda_model, dictionary, corpus = get_lda_model(self.index_tokens)
+        lda_model, dictionary, corpus = get_lda_model(self.index_tokens, num_topics=8)
         print('Assigning LDA topics')
         topic_vector = self.index_tokens.apply(lambda tokens: get_topic_vector(lda_model, dictionary, tokens))
         self.metadata['topic_vector'] = topic_vector
         self.metadata['top_topic'] = topic_vector.apply(np.argmax)
-        return self
 
     def create_document_index(self):
         print('Indexing research papers')
@@ -510,7 +509,8 @@ class SearchResults:
                  'authors': rec['authors'],
                  'abstract': shorten(rec['abstract'], 300),
                  'when': rec['when'],
-                 'url' : rec['url']
+                 'url': rec['url'],
+                 'is_kaggle': is_kaggle()
                  }
                 for rec in search_results.to_dict('records')]
 

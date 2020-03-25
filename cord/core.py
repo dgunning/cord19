@@ -6,6 +6,7 @@ import multiprocessing
 from jinja2 import Template
 from functools import lru_cache
 import pandas as pd
+from pathlib import Path
 
 
 def is_notebook():
@@ -20,6 +21,10 @@ if is_notebook():
     from tqdm.notebook import tqdm
 else:
     from tqdm import tqdm
+
+
+def is_kaggle():
+    return (str(Path('.').resolve())).startswith('/kaggle')
 
 
 def num_cpus() -> int:
