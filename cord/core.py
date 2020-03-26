@@ -10,6 +10,12 @@ from pathlib import Path
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 
+COMM_USE_SUBSET = 'comm_use_subset'
+NONCOMM_USE_SUBSET = 'noncomm_use_subset'
+CUSTOM_LICENSE = 'custom_license'
+BIORXIV_MEDRXIV = 'biorxiv_medrxiv'
+JSON_CATALOGS = [COMM_USE_SUBSET, BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, CUSTOM_LICENSE]
+
 def is_notebook():
     try:
         from IPython import get_ipython

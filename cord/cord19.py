@@ -10,11 +10,12 @@ import requests
 from IPython.display import display
 from requests import HTTPError
 import re
-from cord.core import parallel, ifnone, add, render_html, show_common, is_kaggle, CORD_CHALLENGE_PATH
+from cord.core import parallel, ifnone, add, render_html, show_common, is_kaggle, CORD_CHALLENGE_PATH,\
+    JSON_CATALOGS, BIORXIV_MEDRXIV
 from cord.text import preprocess, extract_publish_date, shorten
 from cord.dates import fix_dates, add_date_diff
 from cord.nlp import get_lda_model, get_top_topic, get_topic_vector
-from cord.jsonpaper import load_json_file
+from cord.jsonpaper import load_json_file, JCatalog
 
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
@@ -149,32 +150,61 @@ def _get_bm25Okapi(index_tokens):
     return BM25Okapi(index_tokens.tolist())
 
 
+def lookup_tokens(shas, token_map):
+    if not isinstance(shas, str): return []
+    for sha in shas.split(';'):
+        tokens = token_map.get(sha.strip())
+        if tokens:
+            return tokens
+
+
 class ResearchPapers:
 
-    def __init__(self, metadata, data_dir='data', index_tokens=None):
+    def __init__(self, metadata, data_dir='data'):
         self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
-
         self.num_results = 10
-        if index_tokens is None:
-            self.metadata = metadata
-            print('Indexing research papers')
-            tick = time.time()
-            index_tokens = self._create_index_tokens()
-            # Add antiviral column
-            self.metadata['antivirals'] = index_tokens.apply(lambda t:
-                                                             ','.join([token for token in t if token.endswith('vir')]))
-            # Does it have any covid term?
-            self.metadata['covid_related'] = index_tokens.apply(
-                lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens if token in _COVID_KEYWORDS]) > 50)
-            self.bm25 = _get_bm25Okapi(index_tokens)
-            self.index_tokens = index_tokens
 
+        self.metadata = metadata
+        print('Indexing research papers')
+        if 'index_tokens' not in metadata:
+            tick = time.time()
+            for catalog in JSON_CATALOGS:
+                catalog_idx = self.metadata.full_text_file == catalog
+                metadata_papers = self.metadata.loc[catalog_idx, ['sha']].copy().reset_index()
+
+                # Load the json catalog
+                json_catalog = JCatalog.load(catalog, data_path=data_dir)
+                json_catalog.nlp()
+                json_papers = json_catalog.papers[['sha', 'index_tokens']].reset_index(drop=True)
+
+                # Set the index tokens from the json_papers to the metadata
+                sha_tokens = metadata_papers.merge(json_papers, how='left', on='sha').set_index('index')
+
+                # Handle records with multiple shas
+                has_multiple = (sha_tokens.sha.fillna('').str.contains(';'))
+                token_map = json_papers[['sha', 'index_tokens']].set_index('sha').to_dict()['index_tokens']
+                sha_tokens.loc[has_multiple, 'index_tokens'] \
+                    = sha_tokens.loc[has_multiple, 'sha'].apply(lambda sha: lookup_tokens(sha, token_map))
+
+                self.metadata.loc[catalog_idx, 'index_tokens'] = sha_tokens.index_tokens
+                null_tokens = self.metadata.index_tokens.isnull()
+                # Fill null tokens with an empty list
+                self.metadata.loc[null_tokens, 'index_tokens'] = \
+                    self.metadata.loc[null_tokens, 'index_tokens'].fillna('').apply(lambda d: d.split(' '))
             tock = time.time()
             print('Finished Indexing in', round(tock - tick, 0), 'seconds')
-        else:
-            self.metadata = metadata
-            self.bm25 = _get_bm25Okapi(index_tokens)
-            self.index_tokens = index_tokens
+
+        if 'antivirals' not in self.metadata:
+            # Add antiviral column
+            self.metadata['antivirals'] = self.metadata.index_tokens\
+                                                .apply(lambda t:
+                                                            ','.join([token for token in t if token.endswith('vir')]))
+        if not 'covid_related' in self.metadata:
+            # Does it have any covid term?
+            self.metadata['covid_related'] = self.metadata.index_tokens.apply(
+                                    lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens
+                                                        if token in _COVID_KEYWORDS]) > 50)
+        self.bm25 = _get_bm25Okapi(self.metadata.index_tokens)
 
     def nlp(self):
         # Topic model
@@ -219,11 +249,8 @@ class ResearchPapers:
         return len(self.metadata)
 
     def _make_copy(self, new_data):
-        _index = new_data.index
-        new_tokens = self.index_tokens.loc[_index]
         return ResearchPapers(metadata=new_data.copy(),
-                              data_dir=self.data_path,
-                              index_tokens=new_tokens)
+                              data_dir=self.data_path)
 
     def query(self, query):
         data = self.metadata.query(query)
@@ -240,6 +267,9 @@ class ResearchPapers:
         if include_null_dates:
             cond = cond | self.metadata.published.isnull()
         return self._make_copy(self.metadata[cond])
+
+    def get_papers(self, sub_catalog):
+        return self.query(f'full_text_file =="{sub_catalog}"')
 
     def since_sars(self, include_null_dates=False):
         return self.after(SARS_DATE, include_null_dates)
@@ -460,7 +490,7 @@ class SearchResults:
 
     def _results_view(self, search_results):
         return [{'title': rec['title'],
-                 'authors': rec['authors'],
+                 'authors': shorten(rec['authors'], 200),
                  'abstract': shorten(rec['abstract'], 300),
                  'when': rec['when'],
                  'url': rec['url'],

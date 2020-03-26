@@ -2,15 +2,13 @@ import collections
 from functools import partial, reduce
 import json
 import pandas as pd
-from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH
+from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV,\
+    NONCOMM_USE_SUBSET, CUSTOM_LICENSE, COMM_USE_SUBSET
 from pathlib import Path, PurePath
 import pickle
 from .text import preprocess
 
-COMM_USE_SUBSET = 'comm_use_subset'
-NONCOMM_USE_SUBSET = 'noncomm_use_subset'
-CUSTOM_LICENSE = 'custom_license'
-BIORXIV_MEDRXIV = 'biorxiv_medrxiv'
+
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 
 
@@ -104,7 +102,7 @@ def load_json_file(json_file):
 class JCatalog:
 
     def __init__(self, papers):
-        self.papers = pd.DataFrame([paper.to_dict() for paper in papers]).set_index('sha')
+        self.papers = pd.DataFrame([paper.to_dict() for paper in papers])
 
     def nlp(self):
         print('Creating index tokens')
@@ -114,12 +112,15 @@ class JCatalog:
         return self.papers.abstract.apply(preprocess())
 
     @classmethod
-    def load(cls, json_dirs=None, data_path=Path('data') / CORD_CHALLENGE_PATH):
+    def load(cls, json_dirs=None, data_path='data'):
+        data_path = Path(data_path) / CORD_CHALLENGE_PATH
         json_dirs = json_dirs or [BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, COMM_USE_SUBSET, CUSTOM_LICENSE]
         json_paths = [Path(data_path) / json_dir / json_dir for json_dir in listify(json_dirs)]
+
         _catalogs = []
         catalog = None
         for json_path in json_paths:
+            print('Loading json from', json_path.stem)
             papers = parallel(load_json_file, list(json_path.glob('*.json')))
             if not catalog:
                 catalog = cls(papers)
@@ -138,6 +139,7 @@ class JCatalog:
 
     @staticmethod
     def from_pickle(sub_catalog="", save_dir='data'):
+        print(f'Loading catalog {sub_catalog if sub_catalog else "all"}')
         save_file = _JSON_CATALOG_SAVEFILE
         if sub_catalog:
             save_file = f'{save_file}_{sub_catalog}'
@@ -149,8 +151,7 @@ class JCatalog:
         if isinstance(item, int):
             j_dict = self.papers.iloc[item]
         else:
-            j_dict = self.papers.loc[item].to_dict()
-            j_dict['sha'] = item
+            j_dict = self.papers.loc[self.papers.sha == item].to_dict()
         return JPaper.from_dict(j_dict)
 
     def __len__(self):
@@ -158,3 +159,8 @@ class JCatalog:
 
     def __add__(self, o):
         return JCatalog(self.papers + o.papers)
+
+    def _repr_html_(self):
+        display_cols = ['title', 'abstract', 'authors']
+        _df = self.papers[display_cols]
+        return _df._repr_html_()
