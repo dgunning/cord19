@@ -8,6 +8,7 @@ from functools import lru_cache
 import pandas as pd
 from pathlib import Path
 
+CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 
 def is_notebook():
     try:
@@ -39,6 +40,11 @@ def ifnone(a: Any, b: Any) -> Any:
     "`a` if `a` is not None, otherwise `b`."
     return b if a is None else a
 
+
+def listify(o):
+    if isinstance(o, list):
+        return o
+    return [o]
 
 #@lru_cache(maxsize=16)
 def load_template(template):

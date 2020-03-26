@@ -10,10 +10,11 @@ import requests
 from IPython.display import display
 from requests import HTTPError
 import re
-from cord.core import parallel, ifnone, add, render_html, show_common, is_kaggle
+from cord.core import parallel, ifnone, add, render_html, show_common, is_kaggle, CORD_CHALLENGE_PATH
 from cord.text import preprocess, extract_publish_date, shorten
 from cord.dates import fix_dates, add_date_diff
 from cord.nlp import get_lda_model, get_top_topic, get_topic_vector
+from cord.jsonpaper import load_json_file
 
 nltk.download("punkt")
 from rank_bm25 import BM25Okapi
@@ -23,7 +24,7 @@ english_stopwords = list(set(stopwords.words('english')))
 import pickle
 from pathlib import Path, PurePath
 
-CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
+
 SARS_DATE = '2002-11-01'
 SARS_COV_2_DATE = '2019-11-30'
 _MINIMUM_SEARCH_SCORE = 2
@@ -37,60 +38,6 @@ class Author:
 
     def __repr__(self):
         return f'{self.first} {self.last}'
-
-
-class JPaper:
-
-    def __init__(self, paper):
-        self.paper = paper
-        self.sha = paper['paper_id']
-        self.abstract = '\n'.join([a['text'] for a in paper['abstract']])
-        self.title = paper['metadata']['title']
-        self.authors = [Author(a.get('first'), a.get('last'), a.get('middle'))
-                        for a in paper['metadata']['authors']]
-        self.sections = [s['text'] for s in paper['body_text']]
-
-    def get_text(self):
-        return ' \n '.join([t[1] for t in self.sections])
-
-    def _repr_html_(self):
-        return render_html('JPaper', paper=self)
-
-    def __repr__(self):
-        return 'JPaper'
-
-
-#@lru_cache(maxsize=2048)
-def load_json(json_file):
-    with open(json_file, 'r') as f:
-        contents = json.load(f)
-        jpaper = JPaper(contents)
-    return jpaper
-
-
-class JCatalog:
-
-    def __init__(self, papers):
-        self.papers = papers
-        self.paper_index = {p.sha: p for p in self.papers}
-        self.index = pd.Series(self.papers, index=[p.sha for p in papers])
-
-    @classmethod
-    def load(cls, json_catalog_path):
-        print('Load JSON from', json_catalog_path)
-        papers = parallel(load_json, list(json_catalog_path.glob('*.json')))
-        return cls(papers)
-
-    def __getitem__(self, item):
-        if isinstance(item, int):
-            return self.papers[item]
-        return self.index.loc[item].values[0]
-
-    def __len__(self):
-        return len(self.papers)
-
-    def __add__(self, o):
-        return JCatalog(self.papers + o.papers)
 
 
 def get(url, timeout=6):
@@ -195,6 +142,13 @@ _COVID_KEYWORDS = {'covid-19': 100, '2019-ncov': 100, 'sars-cov-2': 100, 'sars-c
                       'china': 5, 'wuhan': 20, 'hubei': 30, 'ace2': 30, 'pneumonia': 10}
 
 
+def _get_bm25Okapi(index_tokens):
+    has_tokens = index_tokens.apply(len).sum() > 0
+    if not has_tokens:
+        index_tokens.loc[0] = ['no', 'tokens']
+    return BM25Okapi(index_tokens.tolist())
+
+
 class ResearchPapers:
 
     def __init__(self, metadata, data_dir='data', index_tokens=None):
@@ -212,14 +166,14 @@ class ResearchPapers:
             # Does it have any covid term?
             self.metadata['covid_related'] = index_tokens.apply(
                 lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens if token in _COVID_KEYWORDS]) > 50)
-            self.bm25 = BM25Okapi(index_tokens.tolist())
+            self.bm25 = _get_bm25Okapi(index_tokens)
             self.index_tokens = index_tokens
 
             tock = time.time()
             print('Finished Indexing in', round(tock - tick, 0), 'seconds')
         else:
             self.metadata = metadata
-            self.bm25 = BM25Okapi(index_tokens.tolist())
+            self.bm25 = _get_bm25Okapi(index_tokens)
             self.index_tokens = index_tokens
 
     def nlp(self):
@@ -319,6 +273,13 @@ class ResearchPapers:
                         'has_text', 'published', 'when']
         return self.metadata[display_cols]._repr_html_()
 
+    def files(self):
+        def full_text_path(self):
+            if self.has_text():
+                text_file = self.paper.loc['full_text_file']
+                text_path = self.data_path / text_file / text_file / f'{self.sha}.json'
+                return text_path
+
     @staticmethod
     def load_metadata(data_path=Path('data') / CORD_CHALLENGE_PATH):
         print('Loading metadata from', data_path)
@@ -404,13 +365,6 @@ class ResearchPapers:
         return widgets.interactive(self._search_papers, SearchTerms=search_terms)
 
 
-# Convert the doi to a url
-def doi_url(d):
-    if not d:
-        return ''
-    return f'http://{d}' if d.startswith('doi.org') else f'http://doi.org/{d}'
-
-
 class Paper:
     '''
     A single research paper
@@ -464,7 +418,7 @@ class Paper:
     def get_json_paper(self):
         text_path = self.full_text_path()
         if text_path:
-            return load_json(str(text_path.resolve()))
+            return load_json_file(str(text_path.resolve()))
 
     def authors(self, split=False):
         if self.json_paper:
