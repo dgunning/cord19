@@ -1,14 +1,15 @@
-import re
-import nltk
-from nltk.corpus import stopwords
 import calendar
-import numpy as np
+import re
 
-english_stopwords = list(set(stopwords.words('english')))
+import nltk
+
+from .stopwords import SIMPLE_STOPWORDS
+
+TOKEN_PATTERN = re.compile('^(20|19)\d{2}|(?=[A-Z])[\w\-\d]+$', re.IGNORECASE)
 
 
 def replace_punctuation(text):
-    t = re.sub('\(|\)|:|,|;|\.|’|”|“|\?|%|>|<|≥|≤|~', '', text)
+    t = re.sub('\(|\)|:|,|;|\.|’|”|“|\?|%|>|<|≥|≤|~|`', '', text)
     t = re.sub('/', ' ', t)
     t = t.replace("'", '')
     return t
@@ -23,10 +24,13 @@ def clean(text):
 def tokenize(text):
     words = nltk.word_tokenize(text)
     return [word for word in words
-                     if len(word) > 1
-                     and not word in english_stopwords
-                     and not (word.isnumeric() and len(word) is not 4)
-                     and (not word.isnumeric() or word.isalpha())]
+            if len(word) > 1
+            and not word in SIMPLE_STOPWORDS
+            and TOKEN_PATTERN.match(word)
+            #and (word.isalpha() or (word.isnumeric() and len(word) ==4))
+            #and not (word.isnumeric() and len(word) is not 4)
+            #and (not word.isnumeric() or word.isalpha())
+            ]
 
 
 def preprocess(text):
@@ -43,7 +47,7 @@ def extract_publish_date(dates):
     year_month = dates.str.extract('(?P<year>\d{4}) ?(?P<month>\w+)?')
     has_month = ~year_month.month.isnull()
     year_month.loc[has_month, 'month'] = year_month.loc[has_month, 'month'] \
-                    .replace(seasons).apply(lambda m: str(months.index(m[:3])).zfill(2))
+        .replace(seasons).apply(lambda m: str(months.index(m[:3])).zfill(2))
     year_month.month = year_month.month.fillna('01').apply(str)
     return year_month.year + '-' + year_month.month
 

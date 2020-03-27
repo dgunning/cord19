@@ -1,6 +1,6 @@
 import collections
 from functools import partial, reduce
-import json
+import simplejson as json
 import pandas as pd
 from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV,\
     NONCOMM_USE_SUBSET, CUSTOM_LICENSE, COMM_USE_SUBSET
@@ -93,10 +93,40 @@ class JPaper:
         return 'JPaper'
 
 
-def load_json_file(json_file):
+def load_json_paper(json_file):
     with open(json_file, 'r') as f:
         contents = json.load(f)
     return JPaper.from_json(contents)
+
+
+def load_json_from_file(json_path):
+    with json_path.open('r') as f:
+        body_text = get_text(json.load(f), 'body_text')
+    return json_path.stem, body_text
+
+
+def load_tokens_from_file(json_path):
+    sha, text = load_json_from_file(json_path)
+    return sha, preprocess(text)
+
+
+def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
+    data_path = Path(data_path) / CORD_CHALLENGE_PATH
+    json_dirs = json_dirs or [BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, COMM_USE_SUBSET, CUSTOM_LICENSE]
+    json_dirs = listify(json_dirs)
+
+    text_dfs = []
+    for json_dir in json_dirs:
+        json_path = Path(data_path) / json_dir / json_dir
+        print('Loading json from', json_path.stem)
+        load_fn = load_tokens_from_file if tokenize else load_json_from_file
+        sha_texts = parallel(load_fn, list(json_path.glob('*.json')))
+        text_dfs.append(pd.DataFrame(sha_texts, columns=['sha', 'text']))
+    text_df = pd.concat(text_dfs, ignore_index=True)
+
+    if tokenize:
+        return text_df.rename(columns={'text': 'index_tokens'})
+    return text_df
 
 
 class JCatalog:
@@ -121,7 +151,7 @@ class JCatalog:
         catalog = None
         for json_path in json_paths:
             print('Loading json from', json_path.stem)
-            papers = parallel(load_json_file, list(json_path.glob('*.json')))
+            papers = parallel(load_json_paper, list(json_path.glob('*.json')))
             if not catalog:
                 catalog = cls(papers)
             else:
