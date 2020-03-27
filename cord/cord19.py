@@ -11,7 +11,7 @@ from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
-from cord.core import ifnone, render_html, show_common, is_kaggle, CORD_CHALLENGE_PATH, \
+from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
     JSON_CATALOGS
 from cord.dates import fix_dates, add_date_diff
 from cord.jsonpaper import load_json_paper, JCatalog, load_json_texts
@@ -239,6 +239,10 @@ class ResearchPapers:
         return self.metadata.apply(lambda d:
                                    np.nan if not d.has_text else get_json_path(self.data_path, d.full_text_file, d.sha),
                                    axis=1)
+
+    def describe(self):
+        cols = [col for col in self.metadata if not col in ['sha','index_tokens']]
+        return describe_dataframe(self.metadata, cols)
 
     def __getitem__(self, item):
         if isinstance(item, int):
