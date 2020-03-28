@@ -9,7 +9,8 @@ import pandas as pd
 from pathlib import Path
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
-
+KAGGLE_INPUT = '../input'
+NON_KAGGLE_DATA_DIR = 'data'
 COMM_USE_SUBSET = 'comm_use_subset'
 NONCOMM_USE_SUBSET = 'noncomm_use_subset'
 CUSTOM_LICENSE = 'custom_license'

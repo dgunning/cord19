@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS
+    JSON_CATALOGS, KAGGLE_INPUT, NON_KAGGLE_DATA_DIR
 from cord.dates import fix_dates, add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
@@ -342,7 +342,13 @@ class ResearchPapers:
                 return text_path
 
     @staticmethod
-    def load_metadata(data_path=Path('data') / CORD_CHALLENGE_PATH):
+    def load_metadata(data_path=None):
+        if data_path is None:
+            if is_kaggle():
+                data_path = data_path=Path(KAGGLE_INPUT) / CORD_CHALLENGE_PATH
+            else:
+                data_path = data_path = Path(NON_KAGGLE_DATA_DIR) / CORD_CHALLENGE_PATH
+
         print('Loading metadata from', data_path)
         metadata_path = PurePath(data_path) / 'metadata.csv'
         dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
@@ -354,9 +360,9 @@ class ResearchPapers:
         return metadata
 
     @classmethod
-    def from_data_dir(cls, data_dir='data', index=None):
-        if is_kaggle():
-            data_dir = '../input'
+    def from_data_dir(cls, data_dir=None, index=None):
+        if not data_dir:
+            data_dir = KAGGLE_INPUT if is_kaggle() else NON_KAGGLE_DATA_DIR
         data_path = Path(data_dir) / 'CORD-19-research-challenge'
         metadata = cls.load_metadata(data_path)
         return cls(metadata, data_dir, index=index)
