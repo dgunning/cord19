@@ -16,7 +16,7 @@ from cord import ResearchPapers
 #data_dir = 'data'
 data_dir = '..\input'
 
-research_papers = ResearchPapers.from_data_dir(data_dir)
+research_papers = ResearchPapers.load()
 ```
 
 ### Search Bar
