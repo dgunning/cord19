@@ -115,6 +115,7 @@ def drop_missing(data):
 def fill_nulls(data):
     data.authors = data.authors.fillna('')
     data.doi = data.doi.fillna('')
+    data.journal = data.journal.fillna('')
     return data
 
 
@@ -360,7 +361,7 @@ class ResearchPapers:
         return metadata
 
     @classmethod
-    def from_data_dir(cls, data_dir=None, index=None):
+    def load(cls, data_dir=None, index=None):
         if not data_dir:
             data_dir = KAGGLE_INPUT if is_kaggle() else NON_KAGGLE_DATA_DIR
         data_path = Path(data_dir) / 'CORD-19-research-challenge'
