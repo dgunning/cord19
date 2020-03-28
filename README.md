@@ -8,6 +8,15 @@ on kaggle
 pip install git+https://github.com/dgunning/cord19.git
 ```
 
+###
+Download the [CORD Research Challenge data](https://www.kaggle.com/allen-institute-for-ai/CORD-19-research-challenge)
+and extract to a folder called **data**. 
+
+```bash
+dir data\CORD-19-research-challenge
+```
+![Cord Searchbar](images/datadir.png)
+
 ## Usage
 
 ```{python}
