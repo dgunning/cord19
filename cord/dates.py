@@ -50,7 +50,7 @@ def repair_date(date_column: pd.Series):
     mdates.loc[idx_YYYY_MON_DD, 'publish_date'] = \
         mdates.loc[idx_YYYY_MON_DD, 'publish_time'].apply(partial(format_date, format='%Y %b %d'))
 
-    print('Converting Dates like "2020 Apr"')
+    print('Converting dates like "2020 Apr"')
     idx_YYYY_MON = mdates.publish_time.str.match(YYYY_MON, case=False)
     mdates.loc[idx_YYYY_MON, 'publish_date'] = \
         mdates.loc[idx_YYYY_MON, 'publish_time'].apply(partial(format_date, format='%Y %b'))
@@ -60,7 +60,7 @@ def repair_date(date_column: pd.Series):
     mdates.loc[idx_YYYY, 'publish_date'] = \
         mdates.loc[idx_YYYY, 'publish_time'].apply(partial(format_date, format='%Y'))
 
-    print('Converting Dates like "2020-01-21"')
+    print('Converting dates like "2020-01-21"')
     idx_YYYY_MM_DD = mdates.publish_time.str.match(YYYY_MM_DD, case=False)
     mdates.loc[idx_YYYY_MM_DD, 'publish_date'] = \
         mdates.loc[idx_YYYY_MM_DD, 'publish_time'].apply(partial(format_date, format='%Y-%m-%d'))

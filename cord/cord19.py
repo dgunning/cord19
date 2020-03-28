@@ -1,4 +1,4 @@
-import time
+import re
 import re
 import time
 
@@ -14,7 +14,7 @@ from requests import HTTPError
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
     JSON_CATALOGS
 from cord.dates import fix_dates, add_date_diff
-from cord.jsonpaper import load_json_paper, JCatalog, load_json_texts
+from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten
 
@@ -137,6 +137,21 @@ _COVID_KEYWORDS = {'covid-19': 100, '2019-ncov': 100, 'sars-cov-2': 100, 'sars-c
                    'outbreak': 10, 'severe': 5, '2019': 10, 'coronavirus': 25, 'novel': 25, 'new': 10,
                    'china': 5, 'wuhan': 20, 'hubei': 30, 'ace2': 30, 'pneumonia': 10}
 
+covid19_synonyms = ['covid',
+                    'coronavirus disease 19',
+                    'sars cov 2',  # Note that search function replaces '-' with ' '
+                    '2019 ncov',
+                    '2019ncov',
+                    r'2019 n cov\b',
+                    r'2019n cov\b',
+                    'ncov 2019',
+                    r'\bn cov 2019',
+                    'coronavirus 2019',
+                    'wuhan pneumonia',
+                    'wuhan virus',
+                    'wuhan coronavirus',
+                    r'coronavirus 2\b']
+
 
 def _get_bm25Okapi(index_tokens):
     has_tokens = index_tokens.apply(len).sum() > 0
@@ -184,10 +199,10 @@ def _set_index_from_text(metadata, data_dir):
 
 class ResearchPapers:
 
-    def __init__(self, metadata, data_dir='data', index='abstract'):
+    def __init__(self, metadata, data_dir='data', index='abstract', display='html'):
         self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
         self.num_results = 10
-
+        self.display = display
         self.metadata = metadata
         print('\nIndexing research papers')
         if 'index_tokens' not in metadata:
@@ -241,7 +256,7 @@ class ResearchPapers:
                                    axis=1)
 
     def describe(self):
-        cols = [col for col in self.metadata if not col in ['sha','index_tokens']]
+        cols = [col for col in self.metadata if not col in ['sha', 'index_tokens']]
         return describe_dataframe(self.metadata, cols)
 
     def __getitem__(self, item):
@@ -262,7 +277,8 @@ class ResearchPapers:
 
     def _make_copy(self, new_data):
         return ResearchPapers(metadata=new_data.copy(),
-                              data_dir=self.data_path)
+                              data_dir=self.data_path,
+                              display=self.display)
 
     def query(self, query):
         data = self.metadata.query(query)
@@ -311,7 +327,7 @@ class ResearchPapers:
         return pd.Series([self.__getitem__(i).title() for i in range(len(self))])
 
     def _repr_html_(self):
-        display_cols = ['title', 'abstract', 'journal', 'authors','published', 'when']
+        display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']
         return self.metadata[display_cols]._repr_html_()
 
     def files(self):
@@ -359,7 +375,8 @@ class ResearchPapers:
                num_results=None,
                covid_related=False,
                start_date=None,
-               end_date=None):
+               end_date=None,
+               display='html'):
         if not self.bm25:
             self.create_document_index()
 
@@ -393,16 +410,18 @@ class ResearchPapers:
         results = results.reset_index(drop=True)
 
         # Return Search Results
-        return SearchResults(results, self.data_path)
+        return SearchResults(results, self.data_path, display=display)
 
     def _search_papers(self, SearchTerms: str):
-        search_results = self.search(SearchTerms)
+        search_results = self.search(SearchTerms, display=self.display)
         if len(search_results) > 0:
             display(search_results)
         return search_results
 
-    def searchbar(self, search_terms='sars-cov-2 outbreak cruise ship', num_results=10):
+    def searchbar(self, search_terms='sars-cov-2 outbreak cruise ship', num_results=10, display=None):
         self.num_results = num_results
+        if display:
+            self.display = display
         return widgets.interactive(self._search_papers, SearchTerms=search_terms)
 
 
@@ -486,12 +505,13 @@ class Paper:
 
 class SearchResults:
 
-    def __init__(self, data: pd.DataFrame, data_path):
+    def __init__(self, data: pd.DataFrame, data_path, display='html'):
         self.data_path = data_path
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.results['url'] = self.results.doi.apply(doi_url)
-        self.columns = [col for col in ['sha', 'title', 'authors', 'when', 'Score'] if col in data]
+        self.columns = [col for col in ['sha', 'title', 'abstract','when', 'authors'] if col in data]
+        self.display = display
 
     def __getitem__(self, item):
         return Paper(self.results.loc[item], self.data_path)
@@ -499,18 +519,22 @@ class SearchResults:
     def __len__(self):
         return len(self.results)
 
-    def _results_view(self, search_results):
-        return [{'title': rec['title'],
-                 'authors': shorten(rec['authors'], 200),
-                 'abstract': shorten(rec['abstract'], 300),
-                 'when': rec['when'],
-                 'url': rec['url'],
-                 'is_kaggle': is_kaggle()
-                 }
-                for rec in search_results.to_dict('records')]
+    def _view_html(self, search_results):
+        _results = [{'title': rec['title'],
+                     'authors': shorten(rec['authors'], 200),
+                     'abstract': shorten(rec['abstract'], 300),
+                     'when': rec['when'],
+                     'url': rec['url'],
+                     'is_kaggle': is_kaggle()
+                     }
+                    for rec in search_results.to_dict('records')]
+        return render_html('SearchResultsHTML', search_results=_results)
 
     def _repr_html_(self):
-        search_results = self._results_view(self.results)
-        # display_cols = [col for col in self.columns if not col == 'sha']
-        return render_html('SearchResultsHTML',
-                           search_results=search_results)
+        if self.display == 'html':
+            return self._view_html(self.results)
+        elif any([self.display == v for v in ['df', 'dataframe', 'table']]):
+            display_cols = [col for col in self.columns if not col == 'sha']
+            return self.results[display_cols]._repr_html_()
+        else:
+            return self._view_html(self.results)
