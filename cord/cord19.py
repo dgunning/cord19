@@ -118,12 +118,16 @@ def fill_nulls(data):
     return data
 
 
+def rename_publish_time(data):
+    return data.rename(columns={'publish_time': 'published'})
+
+
 def clean_metadata(metadata):
     print('Cleaning metadata')
     return metadata.pipe(start) \
         .pipe(clean_title) \
         .pipe(clean_abstract) \
-        .pipe(fix_dates) \
+        .pipe(rename_publish_time) \
         .pipe(add_date_diff) \
         .pipe(drop_missing) \
         .pipe(fill_nulls)
@@ -343,7 +347,7 @@ class ResearchPapers:
         metadata_path = PurePath(data_path) / 'metadata.csv'
         dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
         renames = {'source_x': 'source', 'has_full_text': 'has_text'}
-        metadata = pd.read_csv(metadata_path, dtype=dtypes).rename(columns=renames)
+        metadata = pd.read_csv(metadata_path, dtype=dtypes, parse_dates=['publish_time']).rename(columns=renames)
         # category_dict = {'license': 'category', 'source_x': 'category',
         #                 'journal': 'category', 'full_text_file': 'category'}
         metadata = clean_metadata(metadata)
@@ -351,6 +355,8 @@ class ResearchPapers:
 
     @classmethod
     def from_data_dir(cls, data_dir='data', index=None):
+        if is_kaggle():
+            data_dir = '../input'
         data_path = Path(data_dir) / 'CORD-19-research-challenge'
         metadata = cls.load_metadata(data_path)
         return cls(metadata, data_dir, index=index)
@@ -510,7 +516,7 @@ class SearchResults:
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.results['url'] = self.results.doi.apply(doi_url)
-        self.columns = [col for col in ['sha', 'title', 'abstract','when', 'authors'] if col in data]
+        self.columns = [col for col in ['sha', 'title', 'abstract', 'when', 'authors'] if col in data]
         self.display = display
 
     def __getitem__(self, item):
