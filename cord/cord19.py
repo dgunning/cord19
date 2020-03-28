@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, KAGGLE_INPUT, NON_KAGGLE_DATA_DIR
+    JSON_CATALOGS, KAGGLE_INPUT, NON_KAGGLE_DATA_DIR, find_data_dir
 from cord.dates import fix_dates, add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
@@ -344,11 +344,8 @@ class ResearchPapers:
 
     @staticmethod
     def load_metadata(data_path=None):
-        if data_path is None:
-            if is_kaggle():
-                data_path = data_path=Path(KAGGLE_INPUT) / CORD_CHALLENGE_PATH
-            else:
-                data_path = data_path = Path(NON_KAGGLE_DATA_DIR) / CORD_CHALLENGE_PATH
+        if not data_path:
+            data_path = find_data_dir()
 
         print('Loading metadata from', data_path)
         metadata_path = PurePath(data_path) / 'metadata.csv'
@@ -362,11 +359,12 @@ class ResearchPapers:
 
     @classmethod
     def load(cls, data_dir=None, index=None):
-        if not data_dir:
-            data_dir = KAGGLE_INPUT if is_kaggle() else NON_KAGGLE_DATA_DIR
-        data_path = Path(data_dir) / 'CORD-19-research-challenge'
+        if data_dir:
+            data_path = Path(data_dir) / CORD_CHALLENGE_PATH
+        else:
+            data_path = find_data_dir()
         metadata = cls.load_metadata(data_path)
-        return cls(metadata, data_dir, index=index)
+        return cls(metadata, data_path, index=index)
 
     @staticmethod
     def from_pickle(save_dir='data'):

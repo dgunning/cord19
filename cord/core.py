@@ -17,6 +17,7 @@ CUSTOM_LICENSE = 'custom_license'
 BIORXIV_MEDRXIV = 'biorxiv_medrxiv'
 JSON_CATALOGS = [COMM_USE_SUBSET, BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, CUSTOM_LICENSE]
 
+
 def is_notebook():
     try:
         from IPython import get_ipython
@@ -33,6 +34,18 @@ else:
 
 def is_kaggle():
     return (str(Path('.').resolve())).startswith('/kaggle')
+
+
+def find_data_dir():
+    input_dir = KAGGLE_INPUT if is_kaggle() else NON_KAGGLE_DATA_DIR
+    input_path = Path() / input_dir
+    if input_path.exists():
+        return str(input_path / CORD_CHALLENGE_PATH)
+    else:
+        input_path = Path('..') / input_dir
+        if input_path.exists():
+            return str(input_path / CORD_CHALLENGE_PATH)
+    assert input_path.exists(), f'Cannot find the input dir should be {input_dir}/{CORD_CHALLENGE_PATH}'
 
 
 def num_cpus() -> int:
@@ -53,7 +66,8 @@ def listify(o):
         return o
     return [o]
 
-#@lru_cache(maxsize=16)
+
+# @lru_cache(maxsize=16)
 def load_template(template):
     template_dir = os.path.join(os.path.dirname(__file__), 'templates')
     template_file = os.path.join(template_dir, f'{template}.template')
