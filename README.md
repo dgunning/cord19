@@ -13,9 +13,6 @@ pip install git+https://github.com/dgunning/cord19.git
 ```{python}
 from cord import ResearchPapers
 
-#data_dir = 'data'
-data_dir = '..\input'
-
 research_papers = ResearchPapers.load()
 ```
 
