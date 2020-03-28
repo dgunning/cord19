@@ -1,19 +1,18 @@
 import re
-import re
 import time
 
 import ipywidgets as widgets
 import numpy as np
 import pandas as pd
 import requests
-from IPython.display import display
+from IPython.display import display, clear_output
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, KAGGLE_INPUT, NON_KAGGLE_DATA_DIR, find_data_dir
-from cord.dates import fix_dates, add_date_diff
+    JSON_CATALOGS, find_data_dir
+from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten
@@ -204,10 +203,10 @@ def _set_index_from_text(metadata, data_dir):
 
 class ResearchPapers:
 
-    def __init__(self, metadata, data_dir='data', index='abstract', display='html'):
+    def __init__(self, metadata, data_dir='data', index='abstract', view='html'):
         self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
         self.num_results = 10
-        self.display = display
+        self.view = view
         self.metadata = metadata
         print('\nIndexing research papers')
         if 'index_tokens' not in metadata:
@@ -283,7 +282,7 @@ class ResearchPapers:
     def _make_copy(self, new_data):
         return ResearchPapers(metadata=new_data.copy(),
                               data_dir=self.data_path,
-                              display=self.display)
+                              view=self.view)
 
     def query(self, query):
         data = self.metadata.query(query)
@@ -387,7 +386,7 @@ class ResearchPapers:
                covid_related=False,
                start_date=None,
                end_date=None,
-               display='html'):
+               view='html'):
         if not self.bm25:
             self.create_document_index()
 
@@ -421,19 +420,73 @@ class ResearchPapers:
         results = results.reset_index(drop=True)
 
         # Return Search Results
-        return SearchResults(results, self.data_path, display=display)
+        return SearchResults(results, self.data_path, view=view)
 
-    def _search_papers(self, SearchTerms: str):
-        search_results = self.search(SearchTerms, display=self.display)
+    def _search_papers(self, output, SearchTerms: str, num_results=None, view=None,
+                       start_date=None, end_date=None):
+        if len(SearchTerms) < 5:
+            return
+        search_results = self.search(SearchTerms, num_results=num_results, view=view,
+                                     start_date=start_date, end_date=end_date)
         if len(search_results) > 0:
-            display(search_results)
+            with output:
+                clear_output()
+                display(search_results)
         return search_results
 
-    def searchbar(self, search_terms='sars-cov-2 outbreak cruise ship', num_results=10, display=None):
-        self.num_results = num_results
-        if display:
-            self.display = display
-        return widgets.interactive(self._search_papers, SearchTerms=search_terms)
+    def searchbar(self, initial_search_terms='', num_results=10, view=None):
+        text_input = widgets.Text(layout=widgets.Layout(width='400px'), value=initial_search_terms)
+        search_dates_slider = SearchDatesSlider()
+        search_button = widgets.Button(description='Search', button_style='primary',
+                                       layout=widgets.Layout(width='100px'))
+        search_box = widgets.HBox(children=[text_input, search_button])
+
+        search_widget = widgets.VBox([search_box, search_dates_slider])
+
+        output = widgets.Output()
+
+        def do_search():
+            search_terms = text_input.value.strip()
+            if search_terms and len(search_terms) >= 4:
+                start_date, end_date = search_dates_slider.value
+                self._search_papers(output=output, SearchTerms=search_terms, num_results=num_results, view=view,
+                                    start_date=start_date, end_date=end_date)
+
+        def button_search_handler(btn):
+            with output:
+                clear_output()
+            do_search()
+
+        def text_search_handler(change):
+            if len(change['new'].split(' ')) != len(change['old'].split(' ')):
+                do_search()
+
+        def date_handler(change):
+            do_search()
+
+        search_button.on_click(button_search_handler)
+        text_input.observe(text_search_handler, names='value')
+        search_dates_slider.observe(date_handler, names='value')
+
+        display(search_widget)
+        display(output)
+
+        # Show the initial terms
+        if initial_search_terms:
+            do_search()
+
+
+def SearchDatesSlider():
+    options = [(' 1951 ', '1951-01-01'), (' SARS 2003 ', '2002-11-01'),
+               (' H1N1 2009 ', '2009-04-01'), (' COVID 19 ', '2019-11-30'),
+               (' 2020 ', '2020-12-31')]
+    return widgets.SelectionRangeSlider(
+        options=options,
+        description='Dates',
+        disabled=False,
+        value=('2002-11-01', '2020-12-31'),
+        layout={'width': '480px'}
+    )
 
 
 class Paper:
@@ -516,13 +569,13 @@ class Paper:
 
 class SearchResults:
 
-    def __init__(self, data: pd.DataFrame, data_path, display='html'):
+    def __init__(self, data: pd.DataFrame, data_path, view='html'):
         self.data_path = data_path
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.results['url'] = self.results.doi.apply(doi_url)
         self.columns = [col for col in ['sha', 'title', 'abstract', 'when', 'authors'] if col in data]
-        self.display = display
+        self.view = view
 
     def __getitem__(self, item):
         return Paper(self.results.loc[item], self.data_path)
@@ -542,9 +595,9 @@ class SearchResults:
         return render_html('SearchResultsHTML', search_results=_results)
 
     def _repr_html_(self):
-        if self.display == 'html':
+        if self.view == 'html':
             return self._view_html(self.results)
-        elif any([self.display == v for v in ['df', 'dataframe', 'table']]):
+        elif any([self.view == v for v in ['df', 'dataframe', 'table']]):
             display_cols = [col for col in self.columns if not col == 'sha']
             return self.results[display_cols]._repr_html_()
         else:
