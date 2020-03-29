@@ -204,7 +204,7 @@ def _set_index_from_text(metadata, data_dir):
 class ResearchPapers:
 
     def __init__(self, metadata, data_dir='data', index='abstract', view='html'):
-        self.data_path = Path(data_dir) / CORD_CHALLENGE_PATH
+        self.data_path = Path(data_dir)
         self.num_results = 10
         self.view = view
         self.metadata = metadata
@@ -333,13 +333,6 @@ class ResearchPapers:
     def _repr_html_(self):
         display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']
         return self.metadata[display_cols]._repr_html_()
-
-    def files(self):
-        def full_text_path(self):
-            if self.has_text():
-                text_file = self.paper.loc['full_text_file']
-                text_path = self.data_path / text_file / text_file / f'{self.sha}.json'
-                return text_path
 
     @staticmethod
     def load_metadata(data_path=None):
