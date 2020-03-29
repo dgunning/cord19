@@ -1,5 +1,5 @@
 import collections
-from functools import partial, reduce
+from functools import partial, reduce, lru_cache
 import simplejson as json
 import pandas as pd
 from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV, \
@@ -137,7 +137,7 @@ class JsonPaper:
     def __repr__(self):
         return 'JsonPaper'
 
-
+@lru_cache(maxsize=1024)
 def load_json_file(json_file):
     with Path(json_file).open('r') as f:
         return json.load(f)

@@ -21,16 +21,6 @@ from cord.text import preprocess, shorten
 _MINIMUM_SEARCH_SCORE = 2
 
 
-class Author:
-
-    def __init__(self, first=None, last=None, middle=None):
-        self.first = ifnone(first, '')
-        self.last = ifnone(last, '')
-
-    def __repr__(self):
-        return f'{self.first} {self.last}'
-
-
 def get(url, timeout=6):
     try:
         r = requests.get(url, timeout=timeout)
@@ -136,6 +126,8 @@ _COVID_KEYWORDS = {'covid-19': 100, '2019-ncov': 100, 'sars-cov-2': 100, 'sars-c
                    'outbreak': 10, 'severe': 5, '2019': 10, 'coronavirus': 25, 'novel': 25, 'new': 10,
                    'china': 5, 'wuhan': 20, 'hubei': 30, 'ace2': 30, 'pneumonia': 10}
 
+# Haven't used this lis of synonyms yet but will find some use.
+# TODO: Lookup the kernel to attribute this work to
 covid19_synonyms = ['covid',
                     'coronavirus disease 19',
                     'sars cov 2',  # Note that search function replaces '-' with ' '
@@ -263,6 +255,7 @@ class ResearchPapers:
             paper = self.metadata.iloc[item]
         else:
             paper = self.metadata[self.metadata.sha == item]
+
         return Paper(paper, self.data_path)
 
     def covid_related(self):
@@ -484,57 +477,50 @@ class Paper:
 
     def __init__(self, item, data_path):
         self.sha = item.sha
-        self.paper = item.T
-        self.paper.columns = ['Value']
+        self.catalog = item.full_text_file
+        self.metadata = item
         self.data_path = data_path
 
+    def get_json_paper(self):
+        if self.catalog:
+            json_path = self.data_path / self.catalog / self.catalog / f'{self.sha}.json'
+            return load_json_paper(json_path)
+
+    @property
     def doi(self):
-        return self.paper.loc['doi'].values[0]
+        return self.metadata.doi
 
+    @property
     def html(self):
-        '''
-        Load the paper from doi.org and display as HTML. Requires internet to be ON
-        '''
-        doi = self.doi()
-        if doi:
-            url = doi_url(doi)
-            text = get(url)
-            return widgets.HTML(text)
+        json_paper = self.get_json_paper()
+        if json_paper:
+            return json_paper.html
 
+    @property
     def text(self):
         '''
         Load the paper from doi.org and display as text. Requires Internet to be ON
         '''
-        if self.json_paper is not None:
-            return self.json_paper.text()
-        return get(self.doi())
+        json_paper = self.get_json_paper()
+        if json_paper:
+            return json_paper.text
 
+    @property
     def abstract(self):
-        _abstract = self.paper.loc['abstract'].values[0]
-        if _abstract:
-            return _abstract
-        return ''
+        return self.metadata.abstract
 
+    @property
     def title(self):
-        return self.paper.loc['title'].values[0]
+        return self.metadata.title
 
     def has_text(self):
-        return self.paper.loc['has_text']
+        return self.paper.has_text
 
-    def full_text_path(self):
-        if self.has_text():
-            text_file = self.paper.loc['full_text_file']
-            text_path = self.data_path / text_file / text_file / f'{self.sha}.json'
-            return text_path
-
-    def get_json_paper(self):
-        text_path = self.full_text_path()
-        if text_path:
-            return load_json_paper(str(text_path.resolve()))
-
+    @property
     def authors(self, split=False):
-        if self.json_paper:
-            return self.json_paper.authors
+        json_paper = self.get_json_paper()
+        if json_paper:
+            return ', '.join(json_paper.authors)
         '''
         Get a list of authors
         '''
@@ -551,8 +537,11 @@ class Paper:
         return [a.strip() for a in authors.split(';')]
 
     def _repr_html_(self):
-        return self.paper.fillna('').to_frame()._repr_html_()
-        # return render_html('Paper', paper=self)
+        paper_meta = self.metadata.to_frame().T
+        paper_meta = paper_meta[['published', 'when', 'authors', 'covid_related', 'doi', 'journal']]
+        paper_meta.index = ['']
+
+        return render_html('Paper', paper=self, meta=paper_meta)
 
 
 class SearchResults:
