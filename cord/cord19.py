@@ -484,7 +484,8 @@ class Paper:
     def get_json_paper(self):
         if self.catalog:
             json_path = self.data_path / self.catalog / self.catalog / f'{self.sha}.json'
-            return load_json_paper(json_path)
+            if json_path.exists():
+                return load_json_paper(json_path)
 
     @property
     def doi(self):
