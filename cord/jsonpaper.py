@@ -2,14 +2,13 @@ import collections
 from functools import partial, reduce
 import simplejson as json
 import pandas as pd
-from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV,\
-    NONCOMM_USE_SUBSET, CUSTOM_LICENSE, COMM_USE_SUBSET
+from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV, \
+    NONCOMM_USE_SUBSET, CUSTOM_LICENSE, COMM_USE_SUBSET, find_data_dir
 from pathlib import Path, PurePath
 import pickle
 from .text import preprocess
 import ipywidgets as widgets
 from typing import Dict
-
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 
@@ -78,15 +77,14 @@ def get_authors(paper_json, include_affiliation=False):
         return [author_name(a) for a in paper_json['metadata']['authors']]
 
 
-class JPaper:
+class JsonPaper:
 
-    def __init__(self, paper_json, sha, text, abstract, title, authors):
+    def __init__(self, paper_json):
         self.paper_json = paper_json
-        #self.sha = sha
-        #self.text = text
-        #self.abstract = abstract
-        #self.title = title
-        #.authors = authors
+
+    @property
+    def sha(self):
+        return self.paper_json['paper_id']
 
     @property
     def title(self):
@@ -118,12 +116,7 @@ class JPaper:
 
     @classmethod
     def from_json(cls, paper_json):
-        sha = paper_json['paper_id']
-        text = get_body(paper_json)
-        abstract = get_abstract(paper_json)
-        title = paper_json['metadata']['title']
-        authors = get_authors(paper_json)
-        return cls(paper_json=paper_json, sha=sha, text=text, abstract=abstract, title=title, authors=authors)
+        return cls(paper_json=paper_json)
 
     @classmethod
     def from_dict(cls, paper_dict):
@@ -135,20 +128,25 @@ class JPaper:
         return cls(sha=sha, text=text, abstract=abstract, title=title, authors=authors)
 
     def to_dict(self):
-        return {'sha': self.sha, 'text': self.text, 'abstract': self.abstract,
-                'title': self.title, 'authors': self.authors}
+        return {'sha': self.sha, 'abstract': self.abstract,
+                'title': self.title, 'authors': ' '.join(self.authors)}
 
     def _repr_html_(self):
         return render_html('JPaper', paper=self)
 
     def __repr__(self):
-        return 'JPaper'
+        return 'JsonPaper'
+
+
+def load_json_file(json_file):
+    with Path(json_file).open('r') as f:
+        return json.load(f)
 
 
 def load_json_paper(json_file):
-    with open(json_file, 'r') as f:
+    with Path(json_file).open('r') as f:
         contents = json.load(f)
-    return JPaper.from_json(contents)
+    return JsonPaper(contents)
 
 
 def load_text_body_from_file(json_path):
@@ -181,14 +179,11 @@ def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
     return text_df
 
 
-class JCatalog:
+class JsonCatalog:
 
-    def __init__(self, papers):
+    def __init__(self, papers, json_catalog):
         self.papers = pd.DataFrame([paper.to_dict() for paper in papers])
-
-    def nlp(self):
-        print('Creating index tokens')
-        self.papers['index_tokens'] = self.papers.text.apply(preprocess)
+        self.papers['catalog'] = json_catalog
 
     def get_index_tokens(self):
         return self.papers.abstract.apply(preprocess())
@@ -205,9 +200,9 @@ class JCatalog:
             print('Loading json from', json_path.stem)
             papers = parallel(load_json_paper, list(json_path.glob('*.json')))
             if not catalog:
-                catalog = cls(papers)
+                catalog = cls(papers=papers, json_catalog=json_path.stem)
             else:
-                catalog = catalog + cls(papers)
+                catalog = catalog + cls(papers=papers, json_catalog=json_path.stem)
         return catalog
 
     def save(self, sub_catalog="", save_dir='data', ):
@@ -231,16 +226,26 @@ class JCatalog:
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            j_dict = self.papers.iloc[item]
+            paper_rec = self.papers.iloc[item]
+            sha = paper_rec.sha
         else:
-            j_dict = self.papers.loc[self.papers.sha == item].to_dict()
-        return JPaper.from_dict(j_dict)
+            sha = item
+        return self.get_paper(sha=sha)
+
+    def get_paper(self, sha):
+        paper_rec = self.papers[self.papers.sha == sha]
+        if len(paper_rec) == 1:
+            rec = paper_rec.to_dict('records')[0]
+            sha, catalog = rec['sha'], rec['catalog']
+            json_path = Path(find_data_dir()) / catalog / catalog / f'{sha}.json'
+            jpaper = load_json_paper(json_path)
+            return jpaper
 
     def __len__(self):
         return len(self.papers)
 
     def __add__(self, o):
-        return JCatalog(self.papers + o.papers)
+        return JsonCatalog(self.papers + o.papers)
 
     def _repr_html_(self):
         display_cols = ['title', 'abstract', 'authors']
