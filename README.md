@@ -9,8 +9,10 @@ pip install git+https://github.com/dgunning/cord19.git
 ```
 
 ###
-Download the [CORD Research Challenge data](https://www.kaggle.com/allen-institute-for-ai/CORD-19-research-challenge)
+Login to **Kaggle** and download the [CORD Research Challenge data](https://www.kaggle.com/allen-institute-for-ai/CORD-19-research-challenge)
 and extract to a folder called **data**. 
+
+You can also use the [Kaggle python api](https://github.com/Kaggle/kaggle-api) to download this datatet.
 
 ```bash
 dir data\CORD-19-research-challenge
