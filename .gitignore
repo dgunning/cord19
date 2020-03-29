@@ -2,6 +2,7 @@ data/CORD-19-research-challenge/
 data/CORD-19-research-challenge.zip
 data/*.pickle
 .idea/
+task-notebooks/
 **/__pycache__/
 .ipynb_checkpoints/
 **.egg-info/
