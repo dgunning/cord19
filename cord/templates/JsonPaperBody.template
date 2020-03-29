@@ -1,0 +1,7 @@
+<h3>{{title}}</h3>
+{% for header, texts in sections.items() %}
+<h4>{{header}}</h4>
+    {% for text in texts %}
+   <div>{{text}}</div>
+    {% endfor %}
+{% endfor %}

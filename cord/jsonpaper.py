@@ -7,12 +7,35 @@ from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIOR
 from pathlib import Path, PurePath
 import pickle
 from .text import preprocess
+import ipywidgets as widgets
+from typing import Dict
 
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 
 
-def get_text(paper_json, text_key):
+def get_text_sections(paper_json, text_key) -> Dict:
+    """
+    :param paper_json: The json
+    :param text_key: the text_key - "body_text" or "abstract"
+    :return: a dict with the sections
+    """
+    body_dict = collections.defaultdict(list)
+    for rec in paper_json[text_key]:
+        body_dict[rec['section'].strip()].append(rec['text'])
+    return body_dict
+
+
+get_body_sections = partial(get_text_sections, text_key='body_text')
+get_abstract_sections = partial(get_text_sections, text_key='abstract')
+
+
+def get_text(paper_json, text_key) -> str:
+    """
+    :param paper_json: The json
+    :param text_key: the text_key - "body_text" or "abstract"
+    :return: a text string with the sections
+    """
     body_dict = collections.defaultdict(list)
     for rec in paper_json[text_key]:
         body_dict[rec['section']].append(rec['text'])
@@ -57,12 +80,41 @@ def get_authors(paper_json, include_affiliation=False):
 
 class JPaper:
 
-    def __init__(self, sha, text, abstract, title, authors):
-        self.sha = sha
-        self.text = text
-        self.abstract = abstract
-        self.title = title
-        self.authors = authors
+    def __init__(self, paper_json, sha, text, abstract, title, authors):
+        self.paper_json = paper_json
+        #self.sha = sha
+        #self.text = text
+        #self.abstract = abstract
+        #self.title = title
+        #.authors = authors
+
+    @property
+    def title(self):
+        return self.paper_json['metadata']['title']
+
+    @property
+    def text(self):
+        return get_body(self.paper_json)
+
+    @property
+    def abstract(self):
+        return get_abstract(self.paper_json)
+
+    @property
+    def html(self):
+        sections = get_body_sections(self.paper_json)
+        html = render_html('JsonPaperBody', title=self.title, sections=sections)
+        return widgets.HTML(html)
+
+    @property
+    def abstract_html(self):
+        sections = get_abstract_sections(self.paper_json)
+        html = render_html('JsonPaperBody', title=self.title, sections=sections)
+        return widgets.HTML(html)
+
+    @property
+    def authors(self):
+        return get_authors(self.paper_json)
 
     @classmethod
     def from_json(cls, paper_json):
@@ -71,7 +123,7 @@ class JPaper:
         abstract = get_abstract(paper_json)
         title = paper_json['metadata']['title']
         authors = get_authors(paper_json)
-        return cls(sha=sha, text=text, abstract=abstract, title=title, authors=authors)
+        return cls(paper_json=paper_json, sha=sha, text=text, abstract=abstract, title=title, authors=authors)
 
     @classmethod
     def from_dict(cls, paper_dict):
@@ -99,19 +151,19 @@ def load_json_paper(json_file):
     return JPaper.from_json(contents)
 
 
-def load_json_from_file(json_path):
+def load_text_body_from_file(json_path):
     with json_path.open('r') as f:
         body_text = get_text(json.load(f), 'body_text')
     return json_path.stem, body_text
 
 
 def load_tokens_from_file(json_path):
-    sha, text = load_json_from_file(json_path)
+    sha, text = load_text_body_from_file(json_path)
     return sha, preprocess(text)
 
 
 def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
-    data_path = Path(data_path) / CORD_CHALLENGE_PATH
+    data_path = Path(data_path)
     json_dirs = json_dirs or [BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, COMM_USE_SUBSET, CUSTOM_LICENSE]
     json_dirs = listify(json_dirs)
 
@@ -119,7 +171,7 @@ def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
     for json_dir in json_dirs:
         json_path = Path(data_path) / json_dir / json_dir
         print('Loading json from', json_path.stem)
-        load_fn = load_tokens_from_file if tokenize else load_json_from_file
+        load_fn = load_tokens_from_file if tokenize else load_text_body_from_file
         sha_texts = parallel(load_fn, list(json_path.glob('*.json')))
         text_dfs.append(pd.DataFrame(sha_texts, columns=['sha', 'text']))
     text_df = pd.concat(text_dfs, ignore_index=True)
