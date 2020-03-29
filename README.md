@@ -31,4 +31,4 @@ research_papers = ResearchPapers.load()
 ```{python}
 research_papers.searchbar('vaccine transmission')
 ```
-![Cord Searchbar](images/searchbar.png)
+![Cord Searchbar](images/interactivesearch.png)
