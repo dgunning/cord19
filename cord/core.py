@@ -1,12 +1,12 @@
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Collection, Any
-import time
 import multiprocessing
-from jinja2 import Template
-from functools import lru_cache
-import pandas as pd
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Collection, Any
+
+import pandas as pd
+from jinja2 import Template
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 KAGGLE_INPUT = '../input'
@@ -16,7 +16,8 @@ NONCOMM_USE_SUBSET = 'noncomm_use_subset'
 CUSTOM_LICENSE = 'custom_license'
 BIORXIV_MEDRXIV = 'biorxiv_medrxiv'
 JSON_CATALOGS = [COMM_USE_SUBSET, BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, CUSTOM_LICENSE]
-
+SARS_DATE = '2002-11-01'
+SARS_COV_2_DATE = '2019-11-30'
 
 def is_notebook():
     try:

@@ -1,28 +1,23 @@
+import pickle
 import re
 import time
+from pathlib import Path, PurePath
 
 import ipywidgets as widgets
 import numpy as np
 import pandas as pd
 import requests
 from IPython.display import display, clear_output
-from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten
 
-english_stopwords = list(set(stopwords.words('english')))
-import pickle
-from pathlib import Path, PurePath
-
-SARS_DATE = '2002-11-01'
-SARS_COV_2_DATE = '2019-11-30'
 _MINIMUM_SEARCH_SCORE = 2
 
 

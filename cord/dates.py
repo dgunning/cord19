@@ -20,6 +20,7 @@ def format_date(date, format):
 
 
 def repair_date(date_column: pd.Series):
+    # Function no longer needed since Kaggle fixed the dates on the March 27 data
     mdates = date_column.copy().to_frame().fillna('')
     print("Fixing dates that are a list e.g. \"['2020-02-05', '2020-02']\"")
     idx_list = mdates.publish_time.str.match("\[.*")

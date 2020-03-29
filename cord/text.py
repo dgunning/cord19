@@ -27,9 +27,9 @@ def tokenize(text):
             if len(word) > 1
             and not word in SIMPLE_STOPWORDS
             and TOKEN_PATTERN.match(word)
-            #and (word.isalpha() or (word.isnumeric() and len(word) ==4))
-            #and not (word.isnumeric() and len(word) is not 4)
-            #and (not word.isnumeric() or word.isalpha())
+            # and (word.isalpha() or (word.isnumeric() and len(word) ==4))
+            # and not (word.isnumeric() and len(word) is not 4)
+            # and (not word.isnumeric() or word.isalpha())
             ]
 
 
