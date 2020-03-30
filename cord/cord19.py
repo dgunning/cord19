@@ -195,8 +195,8 @@ class ResearchPapers:
         self.num_results = 10
         self.view = view
         self.metadata = metadata
-        print('\nIndexing research papers')
         if 'index_tokens' not in metadata:
+            print('\nIndexing research papers')
             if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
                 _set_index_from_text(self.metadata, data_dir)
             else:
@@ -305,6 +305,14 @@ class ResearchPapers:
 
     def with_text(self):
         return self.query('has_text')
+
+    def contains(self, search_str, column='abstract'):
+        cond = self.metadata[column].fillna('').str.contains(search_str)
+        return self._make_copy(self.metadata[cond])
+
+    def match(self, search_str, column='abstract'):
+        cond = self.metadata[column].fillna('').str.match(search_str)
+        return self._make_copy(self.metadata[cond])
 
     def head(self, n):
         return self._make_copy(self.metadata.head(n))

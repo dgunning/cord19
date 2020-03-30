@@ -19,6 +19,7 @@ JSON_CATALOGS = [COMM_USE_SUBSET, BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, CUSTOM_LI
 SARS_DATE = '2002-11-01'
 SARS_COV_2_DATE = '2019-11-30'
 
+
 def is_notebook():
     try:
         from IPython import get_ipython

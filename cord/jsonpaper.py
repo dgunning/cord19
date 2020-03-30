@@ -137,6 +137,7 @@ class JsonPaper:
     def __repr__(self):
         return 'JsonPaper'
 
+
 @lru_cache(maxsize=1024)
 def load_json_file(json_file):
     with Path(json_file).open('r') as f:
