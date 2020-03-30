@@ -152,17 +152,20 @@ def load_json_paper(json_file):
 
 def load_text_body_from_file(json_path):
     with json_path.open('r') as f:
-        body_text = get_text(json.load(f), 'body_text')
-    return json_path.stem, body_text
+        json_content = json.load(f)
+        body_text = get_text(json_content, 'body_text')
+        authors = get_authors(json_content)
+    sha = json_path.stem
+    return sha, body_text, authors
 
 
 def load_tokens_from_file(json_path):
-    sha, text = load_text_body_from_file(json_path)
-    return sha, preprocess(text)
+    sha, text, authors = load_text_body_from_file(json_path)
+    return sha, preprocess(text), authors
 
 
-def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
-    data_path = Path(data_path)
+def load_json_texts(json_dirs=None, tokenize=False):
+    data_path = Path(find_data_dir())
     json_dirs = json_dirs or [BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, COMM_USE_SUBSET, CUSTOM_LICENSE]
     json_dirs = listify(json_dirs)
 
@@ -171,8 +174,8 @@ def load_json_texts(json_dirs=None, tokenize=False, data_path='data'):
         json_path = Path(data_path) / json_dir / json_dir
         print('Loading json from', json_path.stem)
         load_fn = load_tokens_from_file if tokenize else load_text_body_from_file
-        sha_texts = parallel(load_fn, list(json_path.glob('*.json')))
-        text_dfs.append(pd.DataFrame(sha_texts, columns=['sha', 'text']))
+        sha_texts_authors = parallel(load_fn, list(json_path.glob('*.json')))
+        text_dfs.append(pd.DataFrame(sha_texts_authors, columns=['sha', 'text', 'authors']))
     text_df = pd.concat(text_dfs, ignore_index=True)
 
     if tokenize:

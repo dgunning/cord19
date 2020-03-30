@@ -13,6 +13,7 @@ with open('README.md') as f:
 with open('LICENSE') as f:
     license = f.read()
 
+EXTRAS_REQUIRES = {'nlp': ['allennlp', 'torch===1.4.0']}
 setup(
     name='cord19',
     version='0.4.0',
@@ -24,5 +25,6 @@ setup(
     license=license,
     packages=['cord'],
     install_requires=REQUIRED,
+    extras_require=EXTRAS_REQUIRES,
     include_package_data=True
 )

@@ -4,8 +4,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Collection, Any
-
+import math
 import pandas as pd
+import numpy as np
 from jinja2 import Template
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
@@ -123,3 +124,13 @@ def show_common(data, column, head=20):
     common_column = data[column].value_counts().to_frame()
     common_column = common_column[common_column[column] > 1]
     return common_column.head(head)
+
+
+# From http://yaoyao.codes/pandas/2018/01/23/pandas-split-a-dataframe-into-chunks
+def index_marks(nrows, chunk_size):
+    return range(chunk_size, math.ceil(nrows / chunk_size) * chunk_size, chunk_size)
+
+
+def split(df, chunk_size):
+    indices = index_marks(df.shape[0], chunk_size)
+    return np.split(df, indices)
