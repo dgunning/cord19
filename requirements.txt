@@ -9,4 +9,3 @@ tqdm
 pendulum
 pytest
 gensim
-pyarrow
