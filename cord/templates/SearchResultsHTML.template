@@ -5,7 +5,7 @@
  <span class='published'>{{paper.when}}</span>
  {% if paper.is_kaggle %}<span class='link-text'>{{paper.url}}</span>
  {% else %} <a href='{{paper.url}}' target='_new' class='link'>Link</a> {% endif %}
- <div class='abstract'>{{paper.abstract}}</div>
+ <div class='abstract'>{{paper.summary}}</div>
 
 {% endfor %}
 

@@ -1,5 +1,6 @@
 
-RESEARCH_PAPER_STOPWORDS = ['introduction', 'abstract', 'section', 'edition', 'chapter']
+RESEARCH_PAPER_STOPWORDS = ['introduction', 'abstract', 'section', 'edition', 'chapter',
+                            'copyright', 'preprint', 'figure']
 ENGLISH_STOPWORDS =['and', 'the', 'is', 'any', 'to', 'by', 'of', 'on','or', 'with', 'which', 'was','be','we', 'are', 'so',
                     'for', 'it', 'in', 'they', 'were', 'as','at','such', 'no', 'that', 'there', 'then', 'those',
                     'not', 'all', 'this','their','our', 'between', 'have', 'than', 'has', 'but', 'why', 'only', 'into',

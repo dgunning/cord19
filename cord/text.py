@@ -4,6 +4,8 @@ import re
 import nltk
 
 from .stopwords import SIMPLE_STOPWORDS
+from gensim.summarization import summarizer
+from gensim.summarization.textcleaner import get_sentences
 
 TOKEN_PATTERN = re.compile('^(20|19)\d{2}|(?=[A-Z])[\w\-\d]+$', re.IGNORECASE)
 
@@ -57,3 +59,24 @@ def shorten(text, length=200):
     if text:
         return f'{text[:_len]}...'
     return ''
+
+
+def num_sentences(text):
+    if not text:
+        return 0
+    return len(list(get_sentences(text)))
+
+
+def summarize(text, word_count=120):
+    if num_sentences(text) > 1:
+        try:
+            word_count_summary = summarizer.summarize(text, word_count=word_count)
+        except ValueError:
+            return text
+        if word_count_summary:
+            return word_count_summary
+        else:
+            ratio_summary = summarizer.summarize(text, ratio=0.2)
+            if ratio_summary:
+                return ratio_summary
+    return text

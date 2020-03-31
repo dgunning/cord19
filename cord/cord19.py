@@ -16,7 +16,8 @@ from cord.core import ifnone, render_html, show_common, describe_dataframe, is_k
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts
 from cord.nlp import get_lda_model, get_topic_vector
-from cord.text import preprocess, shorten
+from cord.text import preprocess, shorten, summarize
+
 
 _MINIMUM_SEARCH_SCORE = 2
 
@@ -320,6 +321,9 @@ class ResearchPapers:
     def tail(self, n):
         return self._make_copy(self.metadata.tail(n).copy())
 
+    def sample(self, n):
+        return self._make_copy(self.metadata.sample(n).copy())
+
     def abstracts(self):
         return pd.Series([self.__getitem__(i).abstract() for i in range(len(self))])
 
@@ -519,6 +523,10 @@ class Paper:
         return self.metadata.abstract
 
     @property
+    def summary(self):
+        return summarize(self.abstract)
+
+    @property
     def title(self):
         return self.metadata.title
 
@@ -573,6 +581,7 @@ class SearchResults:
         _results = [{'title': rec['title'],
                      'authors': shorten(rec['authors'], 200),
                      'abstract': shorten(rec['abstract'], 300),
+                     'summary': shorten(summarize(rec['abstract']), 500),
                      'when': rec['when'],
                      'url': rec['url'],
                      'is_kaggle': is_kaggle()
