@@ -9,6 +9,7 @@ import pickle
 from .text import preprocess
 import ipywidgets as widgets
 from typing import Dict
+from gensim.corpora import Dictionary
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 
@@ -181,6 +182,28 @@ def load_json_texts(json_dirs=None, tokenize=False):
     if tokenize:
         return text_df.rename(columns={'text': 'index_tokens'})
     return text_df
+
+
+def load_dictionary(catalog):
+    json_cache_dir = Path(find_data_dir()).parent / 'json_cache'
+    dictionary_path = json_cache_dir / f'jsoncache_{catalog}.dict'
+    dictionary = Dictionary.load((str(dictionary_path.resolve())))
+    return dictionary
+
+
+def load_json_cache(catalog):
+    print('Loading json cache files for', catalog)
+    json_cache_dir = Path(find_data_dir()).parent / 'json_cache'
+    file_paths = [PurePath(p) for p in json_cache_dir.glob(f'jsoncache_{catalog}*.pq')]
+    if len(file_paths) == 1:
+        json_cache = pd.read_parquet(file_paths[0])
+    else:
+        dfs = parallel(pd.read_parquet, file_paths)
+        json_cache = pd.concat(dfs, ignore_index=True)
+    dictionary: Dictionary = load_dictionary(catalog)
+    json_cache['index_tokens'] \
+        = json_cache.token_int.apply(lambda token_int: [dictionary[ti] for ti in token_int])
+    return json_cache.drop(columns=['token_int'])
 
 
 class JsonCatalog:

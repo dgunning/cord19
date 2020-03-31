@@ -131,6 +131,6 @@ def index_marks(nrows, chunk_size):
     return range(chunk_size, math.ceil(nrows / chunk_size) * chunk_size, chunk_size)
 
 
-def split(df, chunk_size):
+def split_df(df, chunk_size):
     indices = index_marks(df.shape[0], chunk_size)
     return np.split(df, indices)
