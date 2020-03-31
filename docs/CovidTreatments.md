@@ -1,0 +1,1 @@
+https://www.quiverquant.com/covidtreatments/
