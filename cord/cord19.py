@@ -330,9 +330,21 @@ class ResearchPapers:
     def titles(self):
         return pd.Series([self.__getitem__(i).title() for i in range(len(self))])
 
+    def get_summary(self):
+        summary_df = pd.DataFrame({'Papers': [len(self.metadata)],
+                           'Covid19 Papers': [self.metadata.covid_related.sum()],
+                           'Newest': [self.metadata.published.max()],
+                           'Oldest': [self.metadata.published.min()],
+                           'With Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
+                          index=[''])
+        summary_df.Newest = summary_df.Newest.fillna('')
+        summary_df.Oldest = summary_df.Oldest.fillna('')
+        return summary_df
+
     def _repr_html_(self):
         display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']
-        return self.metadata[display_cols]._repr_html_()
+        return render_html('ResearchPapers', summary=self.get_summary()._repr_html_(),
+                           research_papers=self.metadata[display_cols]._repr_html_())
 
     @staticmethod
     def load_metadata(data_path=None):

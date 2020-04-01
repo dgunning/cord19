@@ -1,0 +1,7 @@
+<h3>CORD 19 Research Papers</h3>
+{{summary}}
+<hr/>
+{{research_papers}}
+<style>
+h3 {color: #4169E1}
+</style>
