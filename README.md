@@ -32,3 +32,20 @@ research_papers = ResearchPapers.load()
 research_papers.searchbar('vaccine transmission')
 ```
 ![Cord Searchbar](images/interactivesearch.png)
+
+### Selecting Subsets of Research Papers
+There are many ways to select subsets of research papers including
+
+- **Papers since SARS** `research_papers.since_sars()`
+- **Papers since SARS-COV-2** `research_papers.since_sarscov2()`
+- **Papers before SARS** `research_papers.before_sars()`
+- **Papers before SARS-COV-2** `research_papers.before_sarscov2()`
+- **Papers before a date** `research_papers.before('1989-09-12')`
+- **Papers after a date** `research_papers.after('1989-09-12')`
+- **Papers that contains a string** `research_papers.contains("Fauci", column='authors')`
+- **Papers that match a string (using regex)** `research_papers.match('H[0-9]N[0-9]')`
+
+### Selecting individual Papers
+You can select individual papers by using Python indexing **[]**
+
+`research_papers[200]`
