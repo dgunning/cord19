@@ -107,6 +107,33 @@ def fill_nulls(data):
 def rename_publish_time(data):
     return data.rename(columns={'publish_time': 'published'})
 
+COVID_TERMS = ['covid', 'sars-?n?cov-?2','2019-ncov', 'novel coronavirus', 'sars coronavirus 2']
+COVID_SEARCH = f".*({'|'.join(COVID_TERMS)})"
+NOVEL_CORONAVIRUS = '.*novel coronavirus'
+WUHAN_OUTBREAK = 'wuhan'
+
+
+def tag_covid(data):
+    """
+    Tag all the records that match covid
+    :param data:
+    :return: data
+    """
+    abstract = data.abstract.fillna('')
+    since_covid = (data.published > SARS_COV_2_DATE) | (data.published.isnull())
+    covid_term_match = since_covid & abstract.str.match(COVID_SEARCH, case=False)
+    wuhan_outbreak = since_covid & abstract.str.match('.*(wuhan|hubei)', case=False)
+    covid_match = covid_term_match | wuhan_outbreak
+    data['covid_related'] = False
+    data.loc[covid_match, 'covid_related'] = True
+    return data
+
+
+def apply_tags(data):
+    print('Applying tags to metadata')
+    data = tag_covid(data)
+    return data
+
 
 def clean_metadata(metadata):
     print('Cleaning metadata')
@@ -116,33 +143,12 @@ def clean_metadata(metadata):
         .pipe(rename_publish_time) \
         .pipe(add_date_diff) \
         .pipe(drop_missing) \
-        .pipe(fill_nulls)
+        .pipe(fill_nulls) \
+        .pipe(apply_tags)
 
 
 def get_json_path(data_path, text_path, sha):
     return Path(data_path) / text_path / text_path / f'{sha}.json'
-
-
-_COVID_KEYWORDS = {'covid-19': 100, '2019-ncov': 100, 'sars-cov-2': 100, 'sars-cov': 20, 'quarantine': 10,
-                   'outbreak': 10, 'severe': 5, '2019': 10, 'coronavirus': 25, 'novel': 25, 'new': 10,
-                   'china': 5, 'wuhan': 20, 'hubei': 30, 'ace2': 30, 'pneumonia': 10}
-
-# Haven't used this lis of synonyms yet but will find some use.
-# TODO: Lookup the kernel to attribute this work to
-covid19_synonyms = ['covid',
-                    'coronavirus disease 19',
-                    'sars cov 2',  # Note that search function replaces '-' with ' '
-                    '2019 ncov',
-                    '2019ncov',
-                    r'2019 n cov\b',
-                    r'2019n cov\b',
-                    'ncov 2019',
-                    r'\bn cov 2019',
-                    'coronavirus 2019',
-                    'wuhan pneumonia',
-                    'wuhan virus',
-                    'wuhan coronavirus',
-                    r'coronavirus 2\b']
 
 
 def _get_bm25Okapi(index_tokens):
@@ -215,11 +221,6 @@ class ResearchPapers:
             self.metadata['antivirals'] = self.metadata.index_tokens \
                 .apply(lambda t:
                        ','.join([token for token in t if token.endswith('vir')]))
-        if not 'covid_related' in self.metadata:
-            # Does it have any covid term?
-            self.metadata['covid_related'] = self.metadata.index_tokens.apply(
-                lambda tokens: sum([_COVID_KEYWORDS[token] for token in tokens
-                                    if token in _COVID_KEYWORDS]) > 50)
 
     def nlp(self):
         # Topic model
@@ -237,7 +238,6 @@ class ResearchPapers:
         self.metadata['antivirals'] = index_tokens.apply(lambda t:
                                                          ','.join([token for token in t if token.endswith('vir')]))
         # Does it have any covid term?
-        self.metadata['covid_related'] = index_tokens.apply(lambda t: any([covid_term in t for covid_term in _COVID]))
         self.bm25 = BM25Okapi(index_tokens.tolist())
         tock = time.time()
         print('Finished Indexing in', round(tock - tick, 0), 'seconds')
@@ -381,6 +381,7 @@ class ResearchPapers:
                end_date=None,
                view='html'):
         if not self.bm25:
+            print('BM25 index does not exist .. in search.. recreating')
             self.create_document_index()
 
         n_results = num_results or self.num_results
@@ -568,7 +569,8 @@ class SearchResults:
         self.results = data.dropna(subset=['title'])
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.results['url'] = self.results.doi.apply(doi_url)
-        self.columns = [col for col in ['sha', 'title', 'abstract', 'when', 'authors'] if col in data]
+        self.results['summary'] = self.results.abstract.apply(summarize)
+        self.columns = [col for col in ['sha', 'title', 'summary', 'when', 'authors'] if col in self.results]
         self.view = view
 
     def __getitem__(self, item):
