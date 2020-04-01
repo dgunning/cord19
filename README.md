@@ -49,3 +49,5 @@ There are many ways to select subsets of research papers including
 You can select individual papers by using Python indexing **[]**
 
 `research_papers[200]`
+
+![Show research paper](images/research_papers_200.png)
