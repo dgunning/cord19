@@ -101,6 +101,7 @@ def fill_nulls(data):
     data.authors = data.authors.fillna('')
     data.doi = data.doi.fillna('')
     data.journal = data.journal.fillna('')
+    data.abstract = data.abstract.fillna('')
     return data
 
 
@@ -129,9 +130,35 @@ def tag_covid(data):
     return data
 
 
+def tag_virus(data):
+    VIRUS_SEARCH = f".*(virus|viruses|viral)"
+    viral_cond = data.abstract.str.match(VIRUS_SEARCH, case=False)
+    data['virus'] = False
+    data.loc[viral_cond, 'virus'] = True
+    return data
+
+
+def tag_coronavirus(data):
+    corona_cond = data.abstract.str.match(".*corona", case=False)
+    data['coronavirus'] = False
+    data.loc[corona_cond, 'coronavirus'] = True
+    return data
+
+
+def tag_sars(data):
+    sars_cond = data.abstract.str.match(".*sars", case=False)
+    sars_not_covid = ~(data.covid_related) & (sars_cond)
+    data['sars'] = False
+    data.loc[sars_not_covid, 'sars'] = True
+    return data
+
+
 def apply_tags(data):
     print('Applying tags to metadata')
-    data = tag_covid(data)
+    data = data.pipe(tag_covid)\
+        .pipe(tag_virus)\
+        .pipe(tag_coronavirus) \
+        .pipe(tag_sars)
     return data
 
 
@@ -332,10 +359,13 @@ class ResearchPapers:
 
     def get_summary(self):
         summary_df = pd.DataFrame({'Papers': [len(self.metadata)],
-                           'Covid19 Papers': [self.metadata.covid_related.sum()],
-                           'Newest': [self.metadata.published.max()],
                            'Oldest': [self.metadata.published.min()],
-                           'With Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
+                           'Newest': [self.metadata.published.max()],
+                           'SARS-COV-2': [self.metadata.covid_related.sum()],
+                           'SARS': [self.metadata.sars.sum()],
+                           'Coronavirus': [self.metadata.coronavirus.sum()],
+                           'Virus': [self.metadata.virus.sum()],
+                           'Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
                           index=[''])
         summary_df.Newest = summary_df.Newest.fillna('')
         summary_df.Oldest = summary_df.Oldest.fillna('')
