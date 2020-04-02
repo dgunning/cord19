@@ -537,7 +537,7 @@ class Paper:
         self.data_path = data_path
 
     def get_json_paper(self):
-        if self.catalog:
+        if self.catalog and self.sha:
             json_path = self.data_path / self.catalog / self.catalog / f'{self.sha}.json'
             if json_path.exists():
                 return load_json_paper(json_path)
@@ -568,6 +568,10 @@ class Paper:
     @property
     def summary(self):
         return summarize(self.abstract)
+
+    @property
+    def text_summary(self):
+        return summarize(self.text, word_count=300)
 
     @property
     def title(self):
@@ -633,11 +637,14 @@ class SearchResults:
                     for rec in search_results.to_dict('records')]
         return render_html('SearchResultsHTML', search_results=_results)
 
+    def get_results_df(self):
+        display_cols = [col for col in self.columns if not col == 'sha']
+        return self.results[display_cols]
+
     def _repr_html_(self):
         if self.view == 'html':
             return self._view_html(self.results)
         elif any([self.view == v for v in ['df', 'dataframe', 'table']]):
-            display_cols = [col for col in self.columns if not col == 'sha']
-            return self.results[display_cols]._repr_html_()
+            return self.get_results_df()._repr_html_()
         else:
             return self._view_html(self.results)
