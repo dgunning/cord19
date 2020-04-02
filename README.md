@@ -33,7 +33,7 @@ research_papers
 ![Show research paper](images/research_papers.png)
 
 
-## Search
+# Search
 The search function returns the items that match the search query
 ```{python}
 research_papers.searchbar('vaccine transmission'
@@ -49,7 +49,7 @@ research_papers.searchbar('vaccine transmission')
 ![Cord Searchbar](images/interactivesearch.png)
 
 
-## Selecting Subsets of Research Papers
+# Selecting Subsets of Research Papers
 There are many ways to select subsets of research papers including
 
 - **Papers since SARS** `research_papers.since_sars()`
@@ -62,7 +62,7 @@ There are many ways to select subsets of research papers including
 - **Papers that match a string (using regex)** `research_papers.match('H[0-9]N[0-9]')`
 
 
-## Selecting individual Papers
+# Selecting individual Papers
 You can select individual papers by using Python indexing **[]**
 
 `research_papers[200]`
