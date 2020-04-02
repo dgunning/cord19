@@ -1,7 +1,7 @@
 data/CORD-19-research-challenge/
 data/CORD-19-research-challenge.zip
 data/*.pickle
-data/json_cache
+data/json-cache
 .idea/
 task-notebooks/
 job-notebooks/

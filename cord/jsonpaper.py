@@ -185,14 +185,14 @@ def load_json_texts(json_dirs=None, tokenize=False):
 
 
 def load_dictionary(catalog):
-    json_cache_dir = Path(find_data_dir()).parent / 'json_cache'
+    json_cache_dir = Path(find_data_dir()).parent / 'json-cache'
     dictionary_path = json_cache_dir / f'jsoncache_{catalog}.dict'
     dictionary = Dictionary.load((str(dictionary_path.resolve())))
     return dictionary
 
 
 def get_json_cache_dir():
-    return Path(find_data_dir()).parent / 'json_cache'
+    return Path(find_data_dir()).parent / 'json-cache'
 
 def json_cache_exists():
     return get_json_cache_dir().exists()
