@@ -191,9 +191,16 @@ def load_dictionary(catalog):
     return dictionary
 
 
+def get_json_cache_dir():
+    return Path(find_data_dir()).parent / 'json_cache'
+
+def json_cache_exists():
+    return get_json_cache_dir().exists()
+
+
 def load_json_cache(catalog):
     print('Loading json cache files for', catalog)
-    json_cache_dir = Path(find_data_dir()).parent / 'json_cache'
+    json_cache_dir = get_json_cache_dir()
     file_paths = [PurePath(p) for p in json_cache_dir.glob(f'jsoncache_{catalog}*.pq')]
     if len(file_paths) == 1:
         json_cache = pd.read_parquet(file_paths[0])

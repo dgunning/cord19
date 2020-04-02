@@ -14,7 +14,7 @@ from requests import HTTPError
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
     JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE
 from cord.dates import add_date_diff
-from cord.jsonpaper import load_json_paper, load_json_texts
+from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache
 from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten, summarize
 
@@ -201,7 +201,10 @@ def _set_index_from_text(metadata, data_dir):
         metadata_papers = metadata.loc[catalog_idx, ['sha']].copy().reset_index()
 
         # Load the json catalog
-        json_papers = load_json_texts(json_dirs=catalog, tokenize=True)
+        if json_cache_exists():
+            json_papers = load_json_cache(catalog)
+        else:
+            json_papers = load_json_texts(json_dirs=catalog, tokenize=True)
 
         # Set the index tokens from the json_papers to the metadata
         sha_tokens = metadata_papers.merge(json_papers, how='left', on='sha').set_index('index')
