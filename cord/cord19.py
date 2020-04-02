@@ -201,7 +201,7 @@ def _set_index_from_text(metadata, data_dir):
         metadata_papers = metadata.loc[catalog_idx, ['sha']].copy().reset_index()
 
         # Load the json catalog
-        json_papers = load_json_texts(json_dirs=catalog, data_path=data_dir, tokenize=True)
+        json_papers = load_json_texts(json_dirs=catalog, tokenize=True)
 
         # Set the index tokens from the json_papers to the metadata
         sha_tokens = metadata_papers.merge(json_papers, how='left', on='sha').set_index('index')
