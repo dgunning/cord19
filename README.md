@@ -27,7 +27,7 @@ from cord import ResearchPapers
 research_papers = ResearchPapers.load()
 ```
 
-##E Search
+### Search
 The search function returns the items that match the search query
 ```{python}
 research_papers.searchbar('vaccine transmission'
