@@ -27,7 +27,15 @@ from cord import ResearchPapers
 research_papers = ResearchPapers.load()
 ```
 
+##E Search
+The search function returns the items that match the search query
+```{python}
+research_papers.searchbar('vaccine transmission'
+```
+![Cord Searchbar](images/search.png)
+
 ### Search Bar
+A more convenient way to search is through the search bar. This displays a search widgets in Jupyter notebook
 ```{python}
 research_papers.searchbar('vaccine transmission')
 ```
