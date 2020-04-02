@@ -533,7 +533,11 @@ class Paper:
     def __init__(self, item, data_path):
         self.sha = item.sha
         self.catalog = item.full_text_file
-        self.metadata = item
+        if isinstance(item, pd.DataFrame):
+            # convert to a series
+            self.metadata = item.T.iloc[:,0]
+        else:
+            self.metadata = item
         self.data_path = data_path
 
     def get_json_paper(self):
