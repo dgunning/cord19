@@ -17,15 +17,21 @@ You can also use the [Kaggle python api](https://github.com/Kaggle/kaggle-api) t
 ```bash
 dir data\CORD-19-research-challenge
 ```
-![Cord Searchbar](images/datadir.png)
+![Data directory](images/datadir.png)
 
 ## Usage
-
+The library is meant for use in Jupyter or Kaggle notebooks
 ```{python}
 from cord import ResearchPapers
 
 research_papers = ResearchPapers.load()
 ```
+After loading the research papers you can display in a notebook
+
+```{python}
+research_papers
+```
+![Show research paper](images/research_papers.png)
 
 ### Search
 The search function returns the items that match the search query
