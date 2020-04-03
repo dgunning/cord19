@@ -388,9 +388,8 @@ class ResearchPapers:
         metadata_path = PurePath(data_path) / 'metadata.csv'
         dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
         renames = {'source_x': 'source', 'has_full_text': 'has_text'}
-        metadata = pd.read_csv(metadata_path, dtype=dtypes, parse_dates=['publish_time']).rename(columns=renames)
-        # category_dict = {'license': 'category', 'source_x': 'category',
-        #                 'journal': 'category', 'full_text_file': 'category'}
+        metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
+                               parse_dates=['publish_time']).rename(columns=renames)
         metadata = clean_metadata(metadata)
         return metadata
 
