@@ -462,11 +462,11 @@ class ResearchPapers:
         return SearchResults(results, self.data_path, view=view)
 
     def _search_papers(self, output, SearchTerms: str, num_results=None, view=None,
-                       start_date=None, end_date=None):
+                       start_date=None, end_date=None, covid_related=False):
         if len(SearchTerms) < 5:
             return
         search_results = self.search(SearchTerms, num_results=num_results, view=view,
-                                     start_date=start_date, end_date=end_date)
+                                     start_date=start_date, end_date=end_date, covid_related=covid_related)
         if len(search_results) > 0:
             with output:
                 clear_output()
@@ -475,12 +475,19 @@ class ResearchPapers:
 
     def searchbar(self, initial_search_terms='', num_results=10, view=None):
         text_input = widgets.Text(layout=widgets.Layout(width='400px'), value=initial_search_terms)
-        search_dates_slider = SearchDatesSlider()
+
         search_button = widgets.Button(description='Search', button_style='primary',
                                        layout=widgets.Layout(width='100px'))
         search_box = widgets.HBox(children=[text_input, search_button])
 
-        search_widget = widgets.VBox([search_box, search_dates_slider])
+        # A COVID-related checkbox
+        covid_related_CheckBox = widgets.Checkbox(description='Covid-19 related', value=False, disable=False)
+        checkboxes = widgets.HBox(children=[covid_related_CheckBox])
+
+        # A date slider to limit research papers to a date range
+        search_dates_slider = SearchDatesSlider()
+
+        search_widget = widgets.VBox([search_box, search_dates_slider, checkboxes])
 
         output = widgets.Output()
 
@@ -489,7 +496,7 @@ class ResearchPapers:
             if search_terms and len(search_terms) >= 4:
                 start_date, end_date = search_dates_slider.value
                 self._search_papers(output=output, SearchTerms=search_terms, num_results=num_results, view=view,
-                                    start_date=start_date, end_date=end_date)
+                                    start_date=start_date, end_date=end_date, covid_related=covid_related_CheckBox.value)
 
         def button_search_handler(btn):
             with output:
@@ -503,9 +510,13 @@ class ResearchPapers:
         def date_handler(change):
             do_search()
 
+        def checkbox_handler(change):
+            do_search()
+
         search_button.on_click(button_search_handler)
         text_input.observe(text_search_handler, names='value')
         search_dates_slider.observe(date_handler, names='value')
+        covid_related_CheckBox.observe(checkbox_handler, names='value')
 
         display(search_widget)
         display(output)
@@ -623,7 +634,7 @@ class SearchResults:
         self.results.authors = self.results.authors.apply(str).replace("'", '').replace('[', '').replace(']', '')
         self.results['url'] = self.results.doi.apply(doi_url)
         self.results['summary'] = self.results.abstract.apply(summarize)
-        self.columns = [col for col in ['sha', 'title', 'summary', 'when', 'authors'] if col in self.results]
+        self.columns = [col for col in ['sha', 'title', 'summary', 'when'] if col in self.results]
         self.view = view
 
     def __getitem__(self, item):
