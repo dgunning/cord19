@@ -55,9 +55,11 @@ def extract_publish_date(dates):
 
 
 def shorten(text, length=200):
-    _len = min(len(text), length)
     if text:
-        return f'{text[:_len]}...'
+        _len = min(len(text), length)
+        shortened_text = text[:_len]
+        ellipses = '...' if len(shortened_text) < _len else ''
+        return f'{shortened_text}{ellipses}'
     return ''
 
 

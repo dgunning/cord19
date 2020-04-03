@@ -456,7 +456,7 @@ class ResearchPapers:
         results = results.head(n_results)
 
         # Create the final results
-        results = results.reset_index(drop=True)
+        results = results.drop_duplicates(subset=['title'])
 
         # Return Search Results
         return SearchResults(results, self.data_path, view=view)
