@@ -7,19 +7,18 @@
  {% if paper.is_kaggle %}<span class='link-text'>{{paper.url}}</span>
  {% else %} <a href='{{paper.url}}' target='_new' class='link'>Link</a> {% endif %}
  </div>
- <span class='authors'>{{paper.authors}}</span>
+ <div class='authors'>{{paper.authors}}</div>
 {% endfor %}
 
 <style>
-.authors, .published{
-    padding: 12px 10px 0px 0px;
-    margin: 12px 0px 5px;
+.authors{
+    margin: 4px 0px 15px;
 }
-.authors { color: #778899; }
+.authors { color: #778899}
 .published {color: #2F4F4F; font-weight: bold; font-size: 0.9em; margin-right: 10px}
 h2.cord, h3.cord, h4.cord {margin: 15px 0px 8px 0px}
 h4.cord{color:#008B8B; font-size: 1.1em; margin-top: 15px}
-div.abstract {max-height : 80px; margin: 8px 0px 8px}
-div#pubished_when{margin: 5px 0px}
+div.abstract {max-height : 80px; margin: 8px 0px 2px}
+div#pubished_when{margin: 0px}
 .link-text {color: #808080; font-size: 0.9em}
 </style>

@@ -58,7 +58,7 @@ def shorten(text, length=200):
     if text:
         _len = min(len(text), length)
         shortened_text = text[:_len]
-        ellipses = '...' if len(shortened_text) < _len else ''
+        ellipses = '...' if len(shortened_text) < len(text) else ''
         return f'{shortened_text}{ellipses}'
     return ''
 
