@@ -14,7 +14,7 @@ from requests import HTTPError
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
     JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE
 from cord.dates import add_date_diff
-from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache
+from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten, summarize
 
@@ -555,7 +555,8 @@ class Paper:
 
     def get_json_paper(self):
         if self.catalog and self.sha:
-            json_path = self.data_path / self.catalog / self.catalog / f'{self.sha}.json'
+            sub_path = PMC_JSON if self.metadata.has_pmc_xml_parse else PDF_JSON
+            json_path = self.data_path / self.catalog / self.catalog / sub_path / f'{self.sha}.json'
             if json_path.exists():
                 return load_json_paper(json_path)
 
@@ -605,7 +606,7 @@ class Paper:
         '''
         Get a list of authors
         '''
-        authors = self.paper.loc['authors'].values[0]
+        authors = self.metadata.authors
         if not authors:
             return []
         if not split:

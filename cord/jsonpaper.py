@@ -12,7 +12,8 @@ from typing import Dict
 from gensim.corpora import Dictionary
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
-
+PDF_JSON = 'pdf_json'
+PMC_JSON = 'pmc_json'
 
 def get_text_sections(paper_json, text_key) -> Dict:
     """
@@ -165,6 +166,16 @@ def load_tokens_from_file(json_path):
     return sha, preprocess(text), authors
 
 
+def list_json_files_in(json_path):
+    # As of April 4th the json files are separated into two directories
+    all_json_files = []
+    for sub_dir in ['pdf_json', 'pmc_json']:
+        json_sub_path = json_path / sub_dir
+        if json_sub_path.exists():
+            all_json_files = all_json_files + list(json_sub_path.glob('*.json'))
+    return all_json_files
+
+
 def load_json_texts(json_dirs=None, tokenize=False):
     data_path = Path(find_data_dir())
     json_dirs = json_dirs or [BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, COMM_USE_SUBSET, CUSTOM_LICENSE]
@@ -175,7 +186,7 @@ def load_json_texts(json_dirs=None, tokenize=False):
         json_path = Path(data_path) / json_dir / json_dir
         print('Loading json from', json_path.stem)
         load_fn = load_tokens_from_file if tokenize else load_text_body_from_file
-        sha_texts_authors = parallel(load_fn, list(json_path.glob('*.json')))
+        sha_texts_authors = parallel(load_fn, list_json_files_in(json_path))
         text_dfs.append(pd.DataFrame(sha_texts_authors, columns=['sha', 'text', 'authors']))
     text_df = pd.concat(text_dfs, ignore_index=True)
 
@@ -232,7 +243,7 @@ class JsonCatalog:
         catalog = None
         for json_path in json_paths:
             print('Loading json from', json_path.stem)
-            papers = parallel(load_json_paper, list(json_path.glob('*.json')))
+            papers = parallel(load_json_paper, list_json_files_in(json_path))
             if not catalog:
                 catalog = cls(papers=papers, json_catalog=json_path.stem)
             else:

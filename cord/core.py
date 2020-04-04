@@ -51,6 +51,10 @@ def find_data_dir():
     assert input_path.exists(), f'Cannot find the input dir should be {input_dir}/{CORD_CHALLENGE_PATH}'
 
 
+def cord_support_dir():
+    return Path(find_data_dir()) / '../cord-support'
+
+
 def num_cpus() -> int:
     "Get number of cpus"
     try:
