@@ -1,4 +1,4 @@
 <h4>{{paper.title}}</h4>
 <div>{{meta._repr_html_()}}<div>
-<h4>Abstract</h4>
-<div style="max-height:160px">{{paper.abstract}}</div>
+<h4>Summary</h4>
+<div style="max-height:160px">{{paper.summary}}</div>

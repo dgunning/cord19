@@ -620,7 +620,7 @@ class Paper:
 
     def _repr_html_(self):
         paper_meta = self.metadata.to_frame().T
-        paper_meta = paper_meta[['published', 'when', 'authors', 'covid_related', 'doi', 'journal']]
+        paper_meta = paper_meta[['published', 'when', 'authors', 'url', ]]
         paper_meta.index = ['']
 
         return render_html('Paper', paper=self, meta=paper_meta)
