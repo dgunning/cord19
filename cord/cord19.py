@@ -374,6 +374,11 @@ class ResearchPapers:
         summary_df.Oldest = summary_df.Oldest.fillna('')
         return summary_df
 
+    def display(self, *paper_ids):
+        for id in paper_ids:
+            paper = self[id]
+            display(paper)
+
     def _repr_html_(self):
         display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']
         return render_html('ResearchPapers', summary=self.get_summary()._repr_html_(),
