@@ -550,6 +550,7 @@ class Paper:
 
         self.metadata = item
         self.sha = item.sha
+        self.cord_uid = item.cord_uid
         self.catalog = item.full_text_file
         self.data_path = data_path
 

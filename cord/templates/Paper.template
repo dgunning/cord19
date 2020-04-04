@@ -1,4 +1,7 @@
 <h4>{{paper.title}}</h4>
 <div>{{meta._repr_html_()}}<div>
 <h4>Summary</h4>
-<div style="max-height:160px">{{paper.summary}}</div>
+<div id="summary">{{paper.summary}}</div>
+<style>
+#summary{max-height:160px; border-bottom: 1px solid #696969; padding: 10px 0px}
+</style>
