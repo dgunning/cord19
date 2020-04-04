@@ -285,7 +285,7 @@ class ResearchPapers:
         if isinstance(item, int):
             paper = self.metadata.iloc[item]
         else:
-            paper = self.metadata[self.metadata.sha == item]
+            paper = self.metadata[self.metadata.cord_uid == item]
 
         return Paper(paper, self.data_path)
 
@@ -650,6 +650,7 @@ class SearchResults:
                      'summary': shorten(summarize(rec['abstract']), 500),
                      'when': rec['when'],
                      'url': rec['url'],
+                     'cord_uid' : rec['cord_uid'],
                      'is_kaggle': is_kaggle()
                      }
                     for rec in search_results.to_dict('records')]

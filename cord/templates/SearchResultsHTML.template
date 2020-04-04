@@ -5,7 +5,7 @@
  <div id="published_when">
  <span class='published'>{{paper.when}}</span>
  {% if paper.is_kaggle %}<span class='link-text'>{{paper.url}}</span>
- {% else %} <a href='{{paper.url}}' target='_new' class='link'>Link</a> {% endif %}
+ {% else %}<a href='{{paper.url}}' target='_new' class='link'>Link</a><span id='cord_uid'>{{paper.cord_uid}}</span>{% endif %}
  </div>
  <div class='authors'>{{paper.authors}}</div>
 {% endfor %}
@@ -16,6 +16,7 @@
 }
 .authors { color: #778899}
 .published {color: #2F4F4F; font-weight: bold; font-size: 0.9em; margin-right: 10px}
+#cord_uid{margin-left: 10px; font-weight: bold; font-size: 0.9em;}
 h2.cord, h3.cord, h4.cord {margin: 15px 0px 8px 0px}
 h4.cord{color:#008B8B; font-size: 1.1em; margin-top: 15px}
 div.abstract {max-height : 80px; margin: 8px 0px 2px}
