@@ -10,3 +10,4 @@ pendulum
 pytest
 gensim
 pyarrow>=0.16.0
+altair

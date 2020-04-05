@@ -1,5 +1,5 @@
 from pathlib import Path, PurePath
-from .core import cord_support_dir
+from .core import cord_support_dir, render_html
 import pandas as pd
 
 
@@ -17,6 +17,13 @@ class Task:
 
     def __getitem__(self, item):
         return self.topics.loc[item]
+
+    def table_of_contents(self):
+        links = self.topics.Question.apply(lambda q: q.replace(' ', '-'))
+        topics = self.topics.Question.tolist()
+
+        return render_html('TableOfContents',
+                           topics=zip(links, topics))
 
     def _repr_html_(self):
         return self.topics._repr_html_()

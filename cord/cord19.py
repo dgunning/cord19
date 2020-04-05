@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.nlp import get_lda_model, get_topic_vector
@@ -185,14 +185,6 @@ def _get_bm25Okapi(index_tokens):
     return BM25Okapi(index_tokens.tolist())
 
 
-def lookup_tokens(shas, token_map):
-    if not isinstance(shas, str): return []
-    for sha in shas.split(';'):
-        tokens = token_map.get(sha.strip())
-        if tokens:
-            return tokens
-
-
 def _set_index_from_text(metadata, data_dir):
     print('Creating the BM25 index from the text contents of the papers')
     tick = time.time()
@@ -213,16 +205,30 @@ def _set_index_from_text(metadata, data_dir):
         has_multiple = (sha_tokens.sha.fillna('').str.contains(';'))
         token_map = json_papers[['sha', 'index_tokens']].set_index('sha').to_dict()['index_tokens']
         sha_tokens.loc[has_multiple, 'index_tokens'] \
-            = sha_tokens.loc[has_multiple, 'sha'].apply(lambda sha: lookup_tokens(sha, token_map))
+            = sha_tokens.loc[has_multiple, 'sha'].apply(lambda sha: lookup_by_sha(sha, token_map))
 
         metadata.loc[catalog_idx, 'index_tokens'] = sha_tokens.index_tokens
         null_tokens = metadata.index_tokens.isnull()
         # Fill null tokens with an empty list
         metadata.loc[null_tokens, 'index_tokens'] = \
             metadata.loc[null_tokens, 'index_tokens'].fillna('').apply(lambda d: d.split(' '))
+
     tock = time.time()
     print('Finished Indexing texts in', round(tock - tick, 0), 'seconds')
     return metadata
+
+
+def create_annoy_index(document_vectors):
+    print('Creating Annoy document index')
+    tick = time.time()
+    from annoy import AnnoyIndex
+    annoy_index = AnnoyIndex(20, 'angular')
+    for i in range(len(document_vectors)):
+        annoy_index.add_item(i, document_vectors.loc[i])
+    annoy_index.build()
+    tock = time.time()
+    print('Finished creating Annoy document index in', round(tock - tick, 0), 'seconds')
+    return annoy_index
 
 
 class ResearchPapers:
@@ -244,6 +250,7 @@ class ResearchPapers:
                 tock = time.time()
                 print('Finished Indexing in', round(tock - tick, 0), 'seconds')
 
+        # Create BM25 search index
         self.bm25 = _get_bm25Okapi(self.metadata.index_tokens)
 
         if 'antivirals' not in self.metadata:
