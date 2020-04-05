@@ -1,7 +1,5 @@
 {% for paper in search_results %}
  <h4 class='cord'>{{paper.title}}</h4>
-
- <div class='abstract'>{{paper.summary}}</div>
  <div id="published_when">
      <span class='published'>{{paper.when}}</span>
      {% if paper.is_kaggle %}
@@ -10,6 +8,7 @@
         <a href='{{paper.url}}' target='_new' class='link'>Link</a>
      {% endif %}
  </div>
+ <div class='abstract'>{{paper.summary}}</div>
  <div class='authors'>{{paper.authors}}</div>
 {% endfor %}
 
