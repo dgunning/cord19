@@ -55,7 +55,7 @@ def find_data_dir():
 
 
 def cord_support_dir():
-    return Path(find_data_dir()) / '../cord-support'
+    return Path(find_data_dir()) / '../cordsupport'
 
 
 DOCUMENT_VECTOR_PATH = cord_support_dir() / 'DocumentVectors.pq'
