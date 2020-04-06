@@ -12,10 +12,9 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
-from cord.nlp import get_lda_model, get_topic_vector
 from cord.text import preprocess, shorten, summarize
 
 
@@ -259,13 +258,22 @@ class ResearchPapers:
                 .apply(lambda t:
                        ','.join([token for token in t if token.endswith('vir')]))
 
-    def nlp(self):
-        # Topic model
-        lda_model, dictionary, corpus = get_lda_model(self.index_tokens, num_topics=8)
-        print('Assigning LDA topics')
-        topic_vector = self.index_tokens.apply(lambda tokens: get_topic_vector(lda_model, dictionary, tokens))
-        self.metadata['topic_vector'] = topic_vector
-        self.metadata['top_topic'] = topic_vector.apply(np.argmax)
+    def display(self, *paper_ids):
+        if len(paper_ids) == 1:
+            paper_ids = listify(paper_ids[0])
+
+        _recs = []
+        for id in paper_ids:
+            paper = self[id]
+            _recs.append({'published': paper.metadata.published,
+                          'title': paper.title,
+                          'summary': paper.summary,
+                          'when': paper.metadata.when})
+        df = pd.DataFrame(_recs).sort_values(['published'], ascending=False).drop(columns=['published'])
+
+        def highlight_cols(s):
+            return 'font-size: 1.1em; color: #008B8B; font-weight: bold'
+        return df.style.applymap(highlight_cols, subset=pd.IndexSlice[:, ['title']]).hide_index()
 
     def create_document_index(self):
         print('Indexing research papers')
@@ -380,11 +388,6 @@ class ResearchPapers:
         summary_df.Newest = summary_df.Newest.fillna('')
         summary_df.Oldest = summary_df.Oldest.fillna('')
         return summary_df
-
-    def display(self, *paper_ids):
-        for id in paper_ids:
-            paper = self[id]
-            display(paper)
 
     def _repr_html_(self):
         display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']

@@ -92,15 +92,14 @@ InformationSharing,Topic,3,Understanding and mitigating barriers to information-
 InformationSharing,Topic,4,"How to recruit, support, and coordinate local (non-Federal) expertise and capacity relevant to public health emergency response (public, private, commercial and non-profit, including academic).",
 InformationSharing,Topic,5,Integration of federal/state/local public health surveillance systems.,
 InformationSharing,Topic,6,Value of investments in baseline public health response infrastructure preparedness,
-InformationSharing,Topic,7,"Modes of communicating with target high-risk populations (elderly, health care workers).",
-InformationSharing,Topic,8,Risk communication and guidelines that are easy to understand and follow (include targeting at risk populations’ families too).,
+InformationSharing,Topic,7,"Modes of communicating with target high-risk populations (elderly, health care workers).","Communicating, reaching, speaking or targeting old age, elderly, senior at home or in nursing homes or to health care workers, nurses, doctors, professionals or emergency care"
+InformationSharing,Topic,8,Risk communication and guidelines that are easy to understand and follow (include targeting at risk populations’ families too).,Risk information communication guidelines instructions simple easy to understand comprehend and follow target at risk population persons family
 InformationSharing,Topic,9,Communication that indicates potential risk of disease to all population groups.,
 InformationSharing,Topic,10,Misunderstanding around containment and mitigation.,
 InformationSharing,Topic,11,"Action plan to mitigate gaps and problems of inequity in the Nation’s public health capability, capacity, and funding to ensure all citizens in need are supported and can access information, surveillance, and treatment.",
-InformationSharing,Topic,12,Measures to reach marginalized and disadvantaged populations.,
-InformationSharing,Topic,13,Data systems and research priorities and agendas incorporate attention to the needs and circumstances of disadvantaged populations and underrepresented minorities.,
-InformationSharing,Topic,14,"Mitigating threats to incarcerated people from COVID-19, assuring access to information, prevention, diagnosis, and treatment.",
-InformationSharing,Topic,15,"Understanding coverage policies (barriers and opportunities) related to testing, treatment, and care",
+InformationSharing,Topic,12,Measures to reach marginalized and disadvantaged populations. Data systems and research priorities and agendas incorporate attention to the needs and circumstances of disadvantaged populations and underrepresented minorities,Measures and policies to reach target communicate to minorities poor disadvantaged people or population. Data and information systems attend to needs of under represented people or persons 
+InformationSharing,Topic,13,"Mitigating threats to incarcerated people from COVID-19, assuring access to information, prevention, diagnosis, and treatment.",
+InformationSharing,Topic,14,"Understanding coverage policies (barriers and opportunities) related to testing, treatment, and care",
 EthicsSocial,Topic,1,Efforts to articulate and translate existing ethical principles and standards to salient issues in COVID-2019,
 EthicsSocial,Topic,2,"Efforts to embed ethics across all thematic areas, engage with novel ethical issues that arise and coordinate to minimize duplication of oversight",
 EthicsSocial,Topic,3,"Efforts to support sustained education, access, and capacity building in the area of ethics",
