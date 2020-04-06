@@ -268,7 +268,8 @@ class ResearchPapers:
             _recs.append({'published': paper.metadata.published,
                           'title': paper.title,
                           'summary': paper.summary,
-                          'when': paper.metadata.when})
+                          'when': paper.metadata.when,
+                          'cord_uid': paper.cord_uid})
         df = pd.DataFrame(_recs).sort_values(['published'], ascending=False).drop(columns=['published'])
 
         def highlight_cols(s):
