@@ -1,4 +1,4 @@
-pandas
+pandas>=1.0.0
 lxml
 html5lib
 bs4
@@ -11,3 +11,4 @@ pytest
 gensim
 pyarrow>=0.16.0
 altair
+annoy
