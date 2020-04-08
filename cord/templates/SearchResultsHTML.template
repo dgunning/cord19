@@ -5,11 +5,12 @@
      {% if paper.is_kaggle %}
        <span class='link-text'>{{paper.url}}</span>
      {% else %}
-        <a href='{{paper.url}}' target='_new' class='link'>Link</a>
+        <a href='{{paper.url}}' rel="noopener noreferrer" target="_blank" class='link'>Link</a> <span id='cord_uid'>{{paper.cord_uid}}</span>
      {% endif %}
  </div>
  <div class='abstract'>{{paper.summary}}</div>
  <div class='authors'>{{paper.authors}}</div>
+
 {% endfor %}
 
 <style>

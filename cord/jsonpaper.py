@@ -2,6 +2,7 @@ import collections
 from functools import partial, reduce, lru_cache
 import simplejson as json
 import pandas as pd
+import numpy as np
 from .core import parallel, render_html, listify, add, CORD_CHALLENGE_PATH, BIORXIV_MEDRXIV, \
     NONCOMM_USE_SUBSET, CUSTOM_LICENSE, COMM_USE_SUBSET, find_data_dir
 from pathlib import Path, PurePath
@@ -10,6 +11,7 @@ from .text import preprocess
 import ipywidgets as widgets
 from typing import Dict
 from gensim.corpora import Dictionary
+import time
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 PDF_JSON = 'pdf_json'
@@ -37,6 +39,8 @@ def get_text(paper_json, text_key) -> str:
     :param text_key: the text_key - "body_text" or "abstract"
     :return: a text string with the sections
     """
+    if not text_key in paper_json:
+        return ''
     body_dict = collections.defaultdict(list)
     for rec in paper_json[text_key]:
         body_dict[rec['section']].append(rec['text'])
@@ -190,6 +194,11 @@ def load_json_texts(json_dirs=None, tokenize=False):
         text_dfs.append(pd.DataFrame(sha_texts_authors, columns=['sha', 'text', 'authors']))
     text_df = pd.concat(text_dfs, ignore_index=True)
 
+    # PCMID is  now in the name of the json file, insteadt of just being the sha
+    text_df['pmcid'] = text_df.sha.str.extract('(PMC[0-9]+)\.xml')
+    text_df.loc[~text_df.pmcid.isnull(), 'sha'] = np.nan
+    text_df = text_df[['sha', 'pmcid', 'text']]
+
     if tokenize:
         return text_df.rename(columns={'text': 'index_tokens'})
     return text_df
@@ -205,12 +214,14 @@ def load_dictionary(catalog):
 def get_json_cache_dir():
     return Path(find_data_dir()).parent / 'json-cache'
 
+
 def json_cache_exists():
     return get_json_cache_dir().exists()
 
 
 def load_json_cache(catalog):
     print('Loading json cache files for', catalog)
+    tick = time.time()
     json_cache_dir = get_json_cache_dir()
     file_paths = [PurePath(p) for p in json_cache_dir.glob(f'jsoncache_{catalog}*.pq')]
     if len(file_paths) == 1:
@@ -221,7 +232,10 @@ def load_json_cache(catalog):
     dictionary: Dictionary = load_dictionary(catalog)
     json_cache['index_tokens'] \
         = json_cache.token_int.apply(lambda token_int: [dictionary[ti] for ti in token_int])
-    return json_cache.drop(columns=['token_int'])
+    df = json_cache.drop(columns=['token_int'])
+    tock = time.time()
+    print('Loaded', catalog, 'json cache in', int(tock - tick), 'seconds')
+    return df
 
 
 class JsonCatalog:

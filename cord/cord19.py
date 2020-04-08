@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify, cord_support_dir
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.text import preprocess, shorten, summarize
@@ -186,10 +186,9 @@ def _get_bm25Okapi(index_tokens):
 
 def _set_index_from_text(metadata, data_dir):
     print('Creating the BM25 index from the text contents of the papers')
-    tick = time.time()
     for catalog in JSON_CATALOGS:
         catalog_idx = metadata.full_text_file == catalog
-        metadata_papers = metadata.loc[catalog_idx, ['sha']].copy().reset_index()
+        metadata_papers = metadata.loc[catalog_idx, ['sha', 'pmcid']].copy().reset_index()
 
         # Load the json catalog
         if json_cache_exists():
@@ -197,23 +196,41 @@ def _set_index_from_text(metadata, data_dir):
         else:
             json_papers = load_json_texts(json_dirs=catalog, tokenize=True)
 
-        # Set the index tokens from the json_papers to the metadata
-        sha_tokens = metadata_papers.merge(json_papers, how='left', on='sha').set_index('index')
+        print('Json document tokens loaded from cache')
+        # New since April 4th - some json files are in PMCXXXX.xml.json files so we need the PCMID
+        json_papers['pmcid'] = json_papers.sha.str.extract('(PMC[0-9]+)\.xml')
+        json_papers.loc[~json_papers.pmcid.isnull(), 'sha'] = np.nan
 
-        # Handle records with multiple shas
-        has_multiple = (sha_tokens.sha.fillna('').str.contains(';'))
-        token_map = json_papers[['sha', 'index_tokens']].set_index('sha').to_dict()['index_tokens']
-        sha_tokens.loc[has_multiple, 'index_tokens'] \
-            = sha_tokens.loc[has_multiple, 'sha'].apply(lambda sha: lookup_by_sha(sha, token_map))
+        # Create the sha lookup dict
+        sha_token_dict = json_papers.loc[~json_papers.sha.isnull(),
+                                        ['sha', 'index_tokens']].set_index('sha').to_dict()['index_tokens']
+        # Create a dataframe with the same shape and index as the metadata papers.
+        # The column index is the original index for the full metadata
+        sha_token_df = metadata_papers.merge(json_papers.dropna(subset=['sha']),
+                                             how='left', on='sha').set_index('index')
+        # Now lookup the index_tokens using the sha
+        sha_token_df['index_tokens'] = sha_token_df.sha.apply(lambda sha:
+                                                              lookup_by_sha(sha, sha_token_dict, not_found=np.nan))
 
-        metadata.loc[catalog_idx, 'index_tokens'] = sha_tokens.index_tokens
-        null_tokens = metadata.index_tokens.isnull()
-        # Fill null tokens with an empty list
-        metadata.loc[null_tokens, 'index_tokens'] = \
-            metadata.loc[null_tokens, 'index_tokens'].fillna('').apply(lambda d: d.split(' '))
+        # Create the pmc lookup dict, then  dataframe with the same shape and index as the metadata paper, then lookup
+        pmc_token_dict = json_papers.loc[~json_papers.pmcid.isnull(),
+                                         ['pmcid', 'index_tokens']].set_index('pmcid').to_dict()['index_tokens']
+        pmc_token_df = metadata_papers.merge(json_papers.dropna(subset=['pmcid']),
+                                             how='left', on='pmcid').set_index('index')
+        pmc_token_df['index_tokens'] = pmc_token_df.pmcid.apply(lambda sha:
+                                                                lookup_by_sha(sha, pmc_token_dict, not_found=np.nan))
 
-    tock = time.time()
-    print('Finished Indexing texts in', round(tock - tick, 0), 'seconds')
+        # Now set the index tokens
+        metadata.loc[catalog_idx, 'index_tokens'] = sha_token_df.index_tokens.fillna(pmc_token_df.index_tokens)
+
+    # If the index tokens are still null .. use the abstracts
+    null_tokens = metadata.index_tokens.isnull()
+    print('There are', null_tokens.sum(), 'papers that will be indexed using the abstract instead of the contents')
+    metadata.loc[null_tokens, 'index_tokens'] = metadata.loc[null_tokens].abstract.apply(preprocess)
+    missing_index_tokens = len(metadata.loc[catalog_idx & metadata.index_tokens.isnull()])
+    if missing_index_tokens > 0:
+        print('There still are', missing_index_tokens, 'index tokens')
+
     return metadata
 
 
@@ -240,7 +257,9 @@ class ResearchPapers:
         if 'index_tokens' not in metadata:
             print('\nIndexing research papers')
             if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
+                tick = time.time()
                 _set_index_from_text(self.metadata, data_dir)
+                print("Finished indexing in", int(time.time()-tick), 'seconds')
             else:
                 print('Creating the BM25 index from the abstracts of the papers')
                 print('Use index="text" if you want to index the texts of the paper instead')
@@ -420,12 +439,12 @@ class ResearchPapers:
 
     @staticmethod
     def from_pickle(save_dir='data'):
-        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
+        save_path = cord_support_dir() / _RESEARCH_PAPERS_SAVE_FILE
         with open(save_path, 'rb') as f:
             return pickle.load(f)
 
     def save(self, save_dir='data'):
-        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
+        save_path = cord_support_dir() / _RESEARCH_PAPERS_SAVE_FILE
         print('Saving to', save_path)
         with open(save_path, 'wb') as f:
             pickle.dump(self, f)
@@ -569,6 +588,7 @@ class Paper:
         self.cord_uid = item.cord_uid
         self.catalog = item.full_text_file
         self.data_path = data_path
+        self.has_pmc = self.metadata.pmcid
 
     def get_json_paper(self):
         if self.catalog and self.sha:
@@ -576,6 +596,26 @@ class Paper:
             json_path = self.data_path / self.catalog / self.catalog / sub_path / f'{self.sha}.json'
             if json_path.exists():
                 return load_json_paper(json_path)
+
+    def get_sha_path(self):
+        if self.metadata.full_text_file and self.sha:
+            return self.data_path / self.metadata.full_text_file / \
+                   self.metadata.full_text_file / PDF_JSON / f'{self.sha}.json'
+
+    def get_sha_json(self):
+        path = self.get_sha_path()
+        if path and path.exists():
+            return load_json_paper(path)
+
+    def get_pmc_path(self):
+        if self.metadata.full_text_file and self.metadata.pmcid:
+            return self.data_path / self.metadata.full_text_file / \
+                   self.metadata.full_text_file / PMC_JSON / f'{self.metadata.pmcid}.xml.json'
+
+    def get_pmc_json(self):
+        path = self.get_pmc_path()
+        if path and path.exists():
+            return load_json_paper(path)
 
     @property
     def doi(self):
