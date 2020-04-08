@@ -58,7 +58,7 @@ def cord_support_dir():
     if is_kaggle():
         return Path(find_data_dir()) / '../cordsupport'
     else:
-        return Path(__file__) / '../cordsupport'
+        return Path(__file__).parent / 'cordsupport'
 
 
 DOCUMENT_VECTOR_PATH = cord_support_dir() / 'DocumentVectors.pq'
