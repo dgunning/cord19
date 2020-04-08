@@ -1,2 +1,3 @@
 include cord/templates/*.*
+include cord/cordsupport/*.*
 include requirements.txt

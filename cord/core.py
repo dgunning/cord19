@@ -55,16 +55,17 @@ def find_data_dir():
 
 
 def cord_support_dir():
-    return Path(find_data_dir()) / '../cordsupport'
+    if is_kaggle():
+        return Path(find_data_dir()) / '../cordsupport'
+    else:
+        return Path(__file__) / '../cordsupport'
 
 
 DOCUMENT_VECTOR_PATH = cord_support_dir() / 'DocumentVectors.pq'
-SIMILARITY_INDEX_PATH = str((Path(cord_support_dir()) / 'PaperSimilarity.ann').resolve())
+SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
 SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
 SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
-
-METADATA_PATH = PurePath(cord_support_dir() / 'Metadata.pq')
-METADATA_LOOKUP = pd.read_parquet(METADATA_PATH)
+METADATA_LOOKUP = pd.read_parquet(PurePath(cord_support_dir() / 'Metadata.pq'))
 
 
 def num_cpus() -> int:

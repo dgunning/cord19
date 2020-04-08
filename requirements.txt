@@ -13,3 +13,4 @@ gensim
 pyarrow>=0.16.0
 altair
 annoy
+ipywidgets>=7.5.1
