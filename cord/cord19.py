@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify, cord_support_dir
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify, cord_support_dir, similar_papers
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.text import preprocess, shorten, summarize
@@ -276,6 +276,13 @@ class ResearchPapers:
             self.metadata['antivirals'] = self.metadata.index_tokens \
                 .apply(lambda t:
                        ','.join([token for token in t if token.endswith('vir')]))
+
+    def show_similar(self, paper_id):
+        similar_paper_ids = similar_papers(paper_id)
+        self.display(*similar_paper_ids)
+
+    def show(self, *paper_ids):
+        return self.display(*paper_ids)
 
     def display(self, *paper_ids):
         if len(paper_ids) == 1:
