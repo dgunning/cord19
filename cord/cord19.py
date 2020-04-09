@@ -281,6 +281,14 @@ class ResearchPapers:
         similar_paper_ids = similar_papers(paper_id)
         self.display(*similar_paper_ids)
 
+    def similar_to(self, paper_id):
+        similar_paper_ids = similar_papers(paper_id)
+        original_paper = self[paper_id]
+        style = 'color: #008B8B; font-weight: bold; font-size: 0.9em;'
+        display(widgets.HTML(
+            f'<h4>Papers similar to <span style="{style}">{original_paper.title}</span></h4>'))
+        return self.display(*similar_paper_ids)
+
     def show(self, *paper_ids):
         return self.display(*paper_ids)
 
@@ -446,12 +454,12 @@ class ResearchPapers:
 
     @staticmethod
     def from_pickle(save_dir='data'):
-        save_path = cord_support_dir() / _RESEARCH_PAPERS_SAVE_FILE
+        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
         with open(save_path, 'rb') as f:
             return pickle.load(f)
 
     def save(self, save_dir='data'):
-        save_path = cord_support_dir() / _RESEARCH_PAPERS_SAVE_FILE
+        save_path = PurePath(save_dir) / _RESEARCH_PAPERS_SAVE_FILE
         print('Saving to', save_path)
         with open(save_path, 'wb') as f:
             pickle.dump(self, f)
