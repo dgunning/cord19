@@ -6,7 +6,7 @@ simplejson
 scipy==1.4.1
 rank_bm25
 nltk
-tqdm
+tqdm>=4.42.0
 pendulum
 pytest
 gensim
