@@ -58,7 +58,7 @@ def cord_support_dir():
     return Path(__file__).parent / 'cordsupport'
 
 
-DOCUMENT_VECTOR_PATH = cord_support_dir() / 'DocumentVectors.pq'
+DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors_{DOCUMENT_VECTOR_LENGTH}.pq'
 SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
 SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
 SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
