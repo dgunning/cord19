@@ -4,7 +4,6 @@ data/*.pickle
 data/json-cache
 .idea/
 task-notebooks/
-job-notebooks/
 **/__pycache__/
 .ipynb_checkpoints/
 **.egg-info/
