@@ -86,7 +86,7 @@ def show_2d_chart(results, query=''):
 
     title_lookup = results.set_index('cord_uid').to_dict()['title']
 
-    chart_data = pd.concat([cord_matches, metadata_coords_sample.sample(800).copy()])
+    chart_data = pd.concat([cord_matches, metadata_coords_sample.sample(800).copy()], sort=True)
     chart_data['Search Results'] = chart_data['Search Results'].fillna('Non Matches')
     chart_data['Title'] = chart_data.cord_uid.apply(lambda id: title_lookup.get(id, ''))
 
