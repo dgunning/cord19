@@ -16,6 +16,7 @@ from cord.core import ifnone, render_html, show_common, describe_dataframe, is_k
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.text import preprocess, shorten, summarize
+from cord.vectors import show_2d_chart
 
 
 _MINIMUM_SEARCH_SCORE = 2
@@ -467,6 +468,14 @@ class ResearchPapers:
     def _create_index_tokens(self):
         abstract_tokens = self.metadata.abstract.apply(preprocess)
         return abstract_tokens
+
+    def search_2d(self, search_string,
+               num_results=25,
+               covid_related=False,
+               start_date=None,
+               end_date=None):
+        search_results = self.search(search_string, num_results, covid_related, start_date, end_date)
+        show_2d_chart(search_results.results, query=search_string)
 
     def search(self, search_string,
                num_results=None,
