@@ -22,15 +22,14 @@ RiskFactors,Topic,6,"Transmission dynamics of the virus, including the basic rep
 RiskFactors,Topic,7,"Severity of disease, including risk of fatality among symptomatic hospitalized patients, and high-risk patient groups",
 RiskFactors,Topic,8,Susceptibility of populations,
 RiskFactors,Topic,9,Public health mitigation measures that could be effective for control,
-GeneticOrigin,Topic,1,Real-time tracking of whole genomes and a mechanism for coordinating the rapid dissemination of that information to inform the development of diagnostics and therapeutics and to track variations of the virus over time.,
-GeneticOrigin,Topic,2,"Access to geographic and temporal diverse sample sets to understand geographic distribution and genomic differences, and determine whether there is more than one strain in circulation. Multi-lateral agreements such as the Nagoya Protocol could be leveraged.",
-GeneticOrigin,Topic,3,"Evidence that livestock could be infected (e.g., field surveillance, genetic sequencing, receptor binding) and serve as a reservoir after the epidemic appears to be over.",
-GeneticOrigin,Topic,4,"Evidence of whether farmers are infected, and whether farmers could have played a role in the origin.",
-GeneticOrigin,Topic,5,Surveillance of mixed wildlife- livestock farms for SARS-CoV-2 and other coronaviruses in Southeast Asia.,
-GeneticOrigin,Topic,6,Experimental infections to test host range for this pathogen.,
-GeneticOrigin,Topic,7,Animal host(s) and any evidence of continued spill-over to humans,
-GeneticOrigin,Topic,8,Socioeconomic and behavioral risk factors for this spill-over,
-GeneticOrigin,Topic,9,Sustainable risk reduction strategies,
+GeneticOrigin,Topic,1,Real-time tracking of whole genomes and a mechanism for coordinating the rapid dissemination of that information to inform the development of diagnostics and therapeutics and to track variations of the virus over time.,Real time tracking of genetic or genome or genomic evolution or variation or mutation or phylogenetic tree and rapid dissemination or sharing of that data or information for vaccine or treatment or therapeutics
+GeneticOrigin,Topic,2,"Access to geographic and temporal diverse sample sets to understand geographic distribution and genomic differences, and determine whether there is more than one strain in circulation. Multi-lateral agreements such as the Nagoya Protocol could be leveraged.","Access to geographic, region or country genetic samples to understand geographic and genomic differences to understand the different virus strains and mutations. Could use Nagoya"
+GeneticOrigin,Topic,3,"Evidence that livestock could be infected (e.g., field surveillance, genetic sequencing, receptor binding) and serve as a reservoir after the epidemic appears to be over. Evidence of whether farmers are infected, and whether farmers could have played a role in the origin.
+Surveillance of mixed wildlife- livestock farms for SARS-CoV-2 and other coronaviruses in Southeast Asia.
+Experimental infections to test host range for this pathogen.",Animals infected or serve as carrier or a virus reservoir or origin both wildlife or domesticated pets. Farmers on mixed wildlife livestock farms infected or role in origin. What is the host range for virus or zoonotic pathogens or zoonoses
+GeneticOrigin,Topic,4,Animal host(s) and any evidence of continued spill-over to humans,Animal carrier or host of zoonotic virus or zoonoses and spill over or spillover to human or animal to human transmission
+GeneticOrigin,Topic,5,Socioeconomic and behavioral risk factors for this spill-over,Risk of animal to human or zoonotic or zoonoses transmission due to social or socioeconomic or behaviour or behavioural factors
+GeneticOrigin,Topic,6,Sustainable risk reduction strategies,Strategy or measures to reduce or mitigate or prevent risk of zoonotic virus evolution or transmission from animal to humans
 Vaccines,Topic,1,Effectiveness of drugs being developed and tried to treat COVID-19 patients.,
 Vaccines,Topic,2,"Clinical and bench trials to investigate less common viral inhibitors against COVID-19 such as naproxen, clarithromycin, and minocyclinethat that may exert effects on viral replication.",
 Vaccines,Topic,3,Methods evaluating potential complication of Antibody-Dependent Enhancement (ADE) in vaccine recipients.,
