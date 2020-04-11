@@ -21,7 +21,7 @@ BIORXIV_MEDRXIV = 'biorxiv_medrxiv'
 JSON_CATALOGS = [COMM_USE_SUBSET, BIORXIV_MEDRXIV, NONCOMM_USE_SUBSET, CUSTOM_LICENSE]
 SARS_DATE = '2002-11-01'
 SARS_COV_2_DATE = '2019-11-30'
-DOCUMENT_VECTOR_LENGTH = 20
+DOCUMENT_VECTOR_LENGTH = 100
 
 
 def is_notebook():
@@ -54,15 +54,18 @@ def find_data_dir():
     assert input_path.exists(), f'Cannot find the input dir should be {input_dir}/{CORD_CHALLENGE_PATH}'
 
 
+SPECTOR_PATH = Path(find_data_dir()) / f"cord19_specter_embeddings_2020-04-10/cord19_specter_embeddings_2020-04-10.csv"
+
+
 def cord_support_dir():
     return Path(__file__).parent / 'cordsupport'
 
 
-DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors_{DOCUMENT_VECTOR_LENGTH}.pq'
 SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
 SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
 SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
-METADATA_LOOKUP = pd.read_csv(PurePath(cord_support_dir() / 'Metadata.csv.gz'))
+DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors.pq'
+document_vectors = pd.read_parquet(DOCUMENT_VECTOR_PATH)
 
 
 def num_cpus() -> int:
@@ -163,13 +166,18 @@ def lookup_by_sha(shas, sha_map, not_found=[]):
 
 
 def get_index(cord_uid):
-    return METADATA_LOOKUP.index[METADATA_LOOKUP.cord_uid == cord_uid].values[0]
+    row_match = np.where(document_vectors.index == cord_uid)
+    if len(row_match[0]) > 0:
+        return np.where(document_vectors.index == cord_uid)[0][0]
 
 
-def similar_papers(paper_id, num_items=6):
+def similar_papers(paper_id, num_items=10):
     index = paper_id if isinstance(paper_id, int) else get_index(paper_id)
+    if not index:
+        return []
     similar_indexes = SIMILARITY_INDEX.get_nns_by_item(index, num_items)
-    return similar_indexes
+    similar_cord_uids = document_vectors.iloc[similar_indexes].index.values.tolist()
+    return [id for id in similar_cord_uids if not id == paper_id]
 
 
 def image(image_path):
