@@ -1,15 +1,20 @@
+__all__ = ['is_notebook', 'is_kaggle', 'find_data_dir', 'cord_support_dir', 'render_html', 'load_template',
+           'similar_papers', 'image', 'get_docs']
+
+import math
 import multiprocessing
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Collection, Any
-import math
-import pandas as pd
+
+import ipywidgets as widgets
 import numpy as np
-from jinja2 import Template
-from pathlib import PurePath
+import pandas as pd
 from annoy import AnnoyIndex
+from jinja2 import Template
+from markdown import markdown
 
 CORD_CHALLENGE_PATH = 'CORD-19-research-challenge'
 KAGGLE_INPUT = '../input'
@@ -185,3 +190,19 @@ def image(image_path):
     from IPython.display import display
     with open(image_path, "rb") as f:
         display(Image(value=f.read()))
+
+
+def get_docs(doc_file: str, suffix='md'):
+    '''
+    Find and return a document
+    :param doc_file:
+    :return:
+    '''
+    doc_path = Path(__file__).parent / 'docs'
+    doc_file_path = doc_path / f'{doc_file}.{suffix}'
+    if not doc_file_path.exists():
+        print('No file named', doc_file_path.stem)
+    else:
+        with doc_file_path.open('r') as f:
+            contents = f.read()
+            return widgets.HTML(markdown(contents))
