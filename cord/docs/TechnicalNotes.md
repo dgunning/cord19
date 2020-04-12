@@ -16,23 +16,27 @@ The document token used in the step above are used to train a gensim **Doc2Vec**
 
 ## Technical Design
 
-For current details on the design ofthe **cord** library, check the project on [github/dgunning/cord19](https://github.com/dgunning/cord19)
+For current details on the design of the **cord** library, check the project on [github/dgunning/cord19](https://github.com/dgunning/cord19)
 
 The **ResearchPapers** class is a container for the metadata, and the BM25 search index. It contains functions to find papers using **index** `research_papers[0]`,  **cord_uid** `research_papers["4nmc356g"]`, **OR** to create subsets of ResearchPapers like `papers.since_sarscov2`, **OR** to run `search()` or display the `searchbar()`
 
 Because the ResearchPapers class is simply a container for the metadata dataframe, and all useful information about each paper is on the dataframe as a column, including the **index_tokens**, tags such as **covid_related** etc, subsetting ResearchPapers is simply a matter of subsetting the **metadata** dataframe, then creating a new ResearchPapers instance. To create a ResearchPapers instance after a date means 
-```{python}
+
+```
     def after(self, date, include_null_dates=False):
         cond = self.metadata.published >= date
         if include_null_dates:
             cond = cond | self.metadata.published.isnull()
         return self._make_copy(self.metadata[cond])
 ```
+
 Thus, we implement functions such as **head**, **tail**, **sample**, **query**, which just delegate to the metadata dataframe function and then create a new ResearchPapers instance.
 
 ## What happens in ResearchPapers.load?
+
 1. **load_metadata** - Load the **metadata.csv** file
-```{python}
+
+````
 @staticmethod
     def load_metadata(data_path=None):
         if not data_path:
@@ -45,8 +49,10 @@ Thus, we implement functions such as **head**, **tail**, **sample**, **query**, 
         metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
                                parse_dates=['publish_time']).rename(columns=renames)
 ```
+
 2. **clean_metadata** - Clean the metadata
-```{python}
+
+```
 def clean_metadata(metadata):
     print('Cleaning metadata')
     return metadata.pipe(start) \
@@ -65,8 +71,7 @@ def clean_metadata(metadata):
 
 After the metadata is loaded and cleaned we create the **BM25** index inside of **ResearchPapers.__init__()**
 
-```{python}
-      
+```
 if 'index_tokens' not in metadata:
     print('\nIndexing research papers')
     if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
@@ -78,5 +83,4 @@ if 'index_tokens' not in metadata:
         self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
         tock = time.time()
         print('Finished Indexing in', round(tock - tick, 0), 'seconds')
-
 ```
