@@ -22,22 +22,21 @@ The **ResearchPapers** class is a container for the metadata, and the BM25 searc
 
 Because the ResearchPapers class is simply a container for the metadata dataframe, and all useful information about each paper is on the dataframe as a column, including the **index_tokens**, tags such as **covid_related** etc, subsetting ResearchPapers is simply a matter of subsetting the **metadata** dataframe, then creating a new ResearchPapers instance. To create a ResearchPapers instance after a date means 
 
-```
+    ::python
     def after(self, date, include_null_dates=False):
         cond = self.metadata.published >= date
         if include_null_dates:
             cond = cond | self.metadata.published.isnull()
         return self._make_copy(self.metadata[cond])
-```
+    
 
 Thus, we implement functions such as **head**, **tail**, **sample**, **query**, which just delegate to the metadata dataframe function and then create a new ResearchPapers instance.
 
-## What happens in ResearchPapers.load?
 
-1. **load_metadata** - Load the **metadata.csv** file
+### Load Metadata
 
-````
-@staticmethod
+    ::python
+    @staticmethod
     def load_metadata(data_path=None):
         if not data_path:
             data_path = find_data_dir()
@@ -48,22 +47,21 @@ Thus, we implement functions such as **head**, **tail**, **sample**, **query**, 
         renames = {'source_x': 'source', 'has_full_text': 'has_text'}
         metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
                                parse_dates=['publish_time']).rename(columns=renames)
-```
 
-2. **clean_metadata** - Clean the metadata
+### Clean Metadata
 
-```
-def clean_metadata(metadata):
-    print('Cleaning metadata')
-    return metadata.pipe(start) \
-        .pipe(clean_title) \
-        .pipe(clean_abstract) \
-        .pipe(rename_publish_time) \
-        .pipe(add_date_diff) \
-        .pipe(drop_missing) \
-        .pipe(fill_nulls) \
-        .pipe(apply_tags)
-```
+    ::python
+    def clean_metadata(metadata):
+        print('Cleaning metadata')
+        return metadata.pipe(start) \
+            .pipe(clean_title) \
+            .pipe(clean_abstract) \
+            .pipe(rename_publish_time) \
+            .pipe(add_date_diff) \
+            .pipe(drop_missing) \
+            .pipe(fill_nulls) \
+            .pipe(apply_tags)
+
 
 3. **Create the BM25 Search Index**
 
@@ -71,16 +69,15 @@ def clean_metadata(metadata):
 
 After the metadata is loaded and cleaned we create the **BM25** index inside of **ResearchPapers.__init__()**
 
-```
-if 'index_tokens' not in metadata:
-    print('\nIndexing research papers')
-    if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
-        _set_index_from_text(self.metadata, data_dir)
-    else:
-        print('Creating the BM25 index from the abstracts of the papers')
-        print('Use index="text" if you want to index the texts of the paper instead')
-        tick = time.time()
-        self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
-        tock = time.time()
-        print('Finished Indexing in', round(tock - tick, 0), 'seconds')
-```
+    ::python
+    if 'index_tokens' not in metadata:
+        print('\nIndexing research papers')
+        if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
+            _set_index_from_text(self.metadata, data_dir)
+        else:
+            print('Creating the BM25 index from the abstracts of the papers')
+            print('Use index="text" if you want to index the texts of the paper instead')
+            tick = time.time()
+            self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
+            tock = time.time()
+            print('Finished Indexing in', round(tock - tick, 0), 'seconds')

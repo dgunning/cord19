@@ -204,5 +204,11 @@ def get_docs(doc_file: str, suffix='md'):
         print('No file named', doc_file_path.stem)
     else:
         with doc_file_path.open('r') as f:
-            contents = f.read()
-            return widgets.HTML(markdown(contents))
+            content = f.read()
+            return widgets.HTML(markdown(content, extensions=['codehilite']))
+
+
+def cord_css():
+    style_path = Path(__file__).parent / 'docs/styles.css'
+    with style_path.open('r') as f:
+        return widgets.HTML(f.read())
