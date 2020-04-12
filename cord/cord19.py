@@ -306,7 +306,6 @@ class ResearchPapers:
                           'when': paper.metadata.when,
                           'cord_uid': paper.cord_uid})
         df = pd.DataFrame(_recs).sort_values(['published'], ascending=False).drop(columns=['published'])
-
         def highlight_cols(s):
             return 'font-size: 1.1em; color: #008B8B; font-weight: bold'
         return df.style.applymap(highlight_cols, subset=pd.IndexSlice[:, ['title']]).hide_index()
