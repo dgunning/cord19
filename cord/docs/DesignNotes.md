@@ -47,3 +47,28 @@ The Search and Similarity indexes also operate differently when we subset resear
 we subset ResearchPaper as follows  `papers.since_sarscov2()` then searches will happen on just that subset.
 Similarity will still happen on the entire dataset, since a user will likely want to get the papers that are most similar
 to a given one regardless of the subset criteria.
+
+
+## Summarizing Research Papers
+
+We use **gensim's TextRank summarizer** to create a summary of the paper's abstract for display in the search results.
+This can be easily switched to being a summary of the paper's content - indeed there is a function in **cord.text** 
+that can summarize any text, but for now we use the abstract.
+
+## Selecting Subsets of Research Papers
+
+Because the **ResearchPapers** class is a wrapper around the dataframe loaded from **metadata.csv**, we can create subsets
+of ResearchPapers by subsetting the dataframe and creating a new ResearchPapers instance. This gives us the ability to
+provide convenience functions for selecting only sets of research papers that a user might be interested in. This includes
+
+- **Papers since SARS** `research_papers.since_sars()`
+- **Papers since SARS-COV-2** `research_papers.since_sarscov2()`
+- **Papers before SARS** `research_papers.before_sars()`
+- **Papers before SARS-COV-2** `research_papers.before_sarscov2()`
+- **Papers before a date** `research_papers.before('1989-09-12')`
+- **Papers after a date** `research_papers.after('1989-09-12')`
+- **Papers that contains a string** `research_papers.contains("Fauci", column='authors')`
+- **Papers that match a string** `(using regex) research_papers.match('H[0-9]N[0-9]')`
+
+
+ 
