@@ -47,7 +47,3 @@ The Search and Similarity indexes also operate differently when we subset resear
 we subset ResearchPaper as follows  `papers.since_sarscov2()` then searches will happen on just that subset.
 Similarity will still happen on the entire dataset, since a user will likely want to get the papers that are most similar
 to a given one regardless of the subset criteria.
-
-```python
-papers = ResearchPapers.load()
-```
