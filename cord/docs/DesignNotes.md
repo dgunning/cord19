@@ -3,9 +3,7 @@
 The **CORD Research Engine** is a tool for locating research papers and surfacing insights on the **SARS-COV-2** virus
 and the disease that it causes **COVID-19**. It follows a Search Engine design metaphor, since it is a design that is
 well known by non-technical users. The tool is designed to help a user quickly assemble readable reports on COVID-19 areas
- and there is a heavy focus on ease of use. 
- 
- All of this is designed to run inside Jupyter notebooks, meaning data discovery, assembly and output will all run inside of
+ and there is a heavy focus on ease of use. All of this is designed to run inside Jupyter notebooks, meaning data discovery, assembly and output will all run inside of
  a Kaggle or Jupyter notebook, rather than a separate web based took. This is mean to significantly increase the speed of information
  retrieval and presentation, and gets around the significant drawback of web tools which cannot easily produce ad-hoc reports 
  or render in multiple formats in the same way that notebooks can.
@@ -49,3 +47,7 @@ The Search and Similarity indexes also operate differently when we subset resear
 we subset ResearchPaper as follows  `papers.since_sarscov2()` then searches will happen on just that subset.
 Similarity will still happen on the entire dataset, since a user will likely want to get the papers that are most similar
 to a given one regardless of the subset criteria.
+
+```python
+papers = ResearchPapers.load()
+```
