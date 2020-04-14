@@ -59,18 +59,18 @@ def find_data_dir():
     assert input_path.exists(), f'Cannot find the input dir should be {input_dir}/{CORD_CHALLENGE_PATH}'
 
 
-SPECTOR_PATH = Path(find_data_dir()) / f"cord19_specter_embeddings_2020-04-10/cord19_specter_embeddings_2020-04-10.csv"
-
-
 def cord_support_dir():
     return Path(__file__).parent / 'cordsupport'
+
+
+def cord_cache_dir():
+    return Path(find_data_dir()).parent / 'cord-cache'
 
 
 SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
 SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
 SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
-DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors.pq'
-document_vectors = pd.read_parquet(DOCUMENT_VECTOR_PATH)
+from .vectors import document_vectors
 
 
 def num_cpus() -> int:
@@ -177,10 +177,11 @@ def get_index(cord_uid):
 
 
 def similar_papers(paper_id, num_items=10):
+    from .vectors import SPECTOR_SIMILARITY_INDEX
     index = paper_id if isinstance(paper_id, int) else get_index(paper_id)
     if not index:
         return []
-    similar_indexes = SIMILARITY_INDEX.get_nns_by_item(index, num_items)
+    similar_indexes = SPECTOR_SIMILARITY_INDEX.get_nns_by_item(index, num_items)
     similar_cord_uids = document_vectors.iloc[similar_indexes].index.values.tolist()
     return [id for id in similar_cord_uids if not id == paper_id]
 
@@ -212,3 +213,4 @@ def cord_css():
     style_path = Path(__file__).parent / 'docs/styles.css'
     with style_path.open('r') as f:
         return widgets.HTML(f.read())
+

@@ -290,6 +290,14 @@ class ResearchPapers:
             f'<h4>Papers similar to <span style="{style}">{original_paper.title}</span></h4>'))
         return self.display(*similar_paper_ids)
 
+    def find_in_papers(self, search_string, num_items=10):
+        from .vectors import find_similar_papers
+        paper_ids = find_similar_papers(search_string, num_items=num_items)
+        style = 'color: #008B8B; font-weight: bold; font-size: 0.9em;'
+        display(widgets.HTML(
+            f'<h4>Papers related to <span style="{style}">{search_string}</span></h4>'))
+        return self.display(*paper_ids)
+
     def show(self, *paper_ids):
         return self.display(*paper_ids)
 

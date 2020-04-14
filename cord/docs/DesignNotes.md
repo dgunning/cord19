@@ -68,7 +68,7 @@ provide convenience functions for selecting only sets of research papers that a 
 - **Papers before a date** `research_papers.before('1989-09-12')`
 - **Papers after a date** `research_papers.after('1989-09-12')`
 - **Papers that contains a string** `research_papers.contains("Fauci", column='authors')`
-- **Papers that match a string** `(using regex) research_papers.match('H[0-9]N[0-9]')`
+- **Papers that match a string** (using regex) `research_papers.match('H[0-9]N[0-9]')`
 
 
  
