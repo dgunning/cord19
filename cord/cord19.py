@@ -491,16 +491,16 @@ class ResearchPapers:
                end_date=None,
                view='html'):
         from .vectors import find_similar_papers
-        #n_results = num_results or self.num_results
-        #search_terms = preprocess(search_string)
-        #doc_scores = self.bm25.get_scores(search_terms)
+        n_results = num_results or self.num_results
+        search_terms = preprocess(search_string)
+        doc_scores = self.bm25.get_scores(search_terms)
 
         # Get the index from the doc scores
-        #ind = np.argsort(doc_scores)[::-1]
-        #results = self.metadata.iloc[ind].copy()
-        #results['Score'] = doc_scores[ind].round(1)
-        paper_ids = find_similar_papers(search_string, num_items=50)
-        results = self.metadata[self.metadata.cord_uid.isin(paper_ids)]
+        ind = np.argsort(doc_scores)[::-1]
+        results = self.metadata.iloc[ind].copy()
+        results['Score'] = doc_scores[ind].round(1)
+        #paper_ids = find_similar_papers(search_string, num_items=50)
+        #results = self.metadata[self.metadata.cord_uid.isin(paper_ids)]
 
         # Filter covid related
         if covid_related:
