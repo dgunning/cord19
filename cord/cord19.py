@@ -255,6 +255,7 @@ class ResearchPapers:
         self.num_results = 10
         self.view = view
         self.metadata = metadata
+        """
         if 'index_tokens' not in metadata:
             print('\nIndexing research papers')
             if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
@@ -271,13 +272,14 @@ class ResearchPapers:
 
         # Create BM25 search index
         self.bm25 = _get_bm25Okapi(self.metadata.index_tokens)
+        
 
         if 'antivirals' not in self.metadata:
             # Add antiviral column
-            self.metadata['antivirals'] = self.metadata.index_tokens \
+            self.metadata['antivirals'] = self.metadata.abstract.apply(preprocess) \
                 .apply(lambda t:
                        ','.join([token for token in t if token.endswith('vir')]))
-
+        """
     def show_similar(self, paper_id):
         similar_paper_ids = similar_papers(paper_id)
         self.display(*similar_paper_ids)
@@ -425,8 +427,7 @@ class ResearchPapers:
                            'SARS-COV-2': [self.metadata.covid_related.sum()],
                            'SARS': [self.metadata.sars.sum()],
                            'Coronavirus': [self.metadata.coronavirus.sum()],
-                           'Virus': [self.metadata.virus.sum()],
-                           'Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
+                           'Virus': [self.metadata.virus.sum()]},
                           index=[''])
         summary_df.Newest = summary_df.Newest.fillna('')
         summary_df.Oldest = summary_df.Oldest.fillna('')
@@ -443,12 +444,15 @@ class ResearchPapers:
             data_path = find_data_dir()
 
         print('Loading metadata from', data_path)
+        tick = time.time()
         metadata_path = PurePath(data_path) / 'metadata.csv'
         dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
         renames = {'source_x': 'source', 'has_full_text': 'has_text'}
         metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
                                parse_dates=['publish_time']).rename(columns=renames)
         metadata = clean_metadata(metadata)
+        tock = time.time()
+        print('Finished loading and cleaning CORD metadata in', int(tock-tick), 'seconds')
         return metadata
 
     @classmethod
