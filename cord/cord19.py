@@ -485,7 +485,7 @@ class ResearchPapers:
         show_2d_chart(search_results.results, query=search_string)
 
     def search(self, search_string,
-               num_results=None,
+               num_results=10,
                covid_related=False,
                start_date=None,
                end_date=None,
