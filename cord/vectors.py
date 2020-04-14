@@ -108,7 +108,8 @@ def get_embeddings_for_papers(papers: List[Dict[str, str]]):
         response = requests.post(SPECTER_URL, json=chunk)
 
         if response.status_code != 200:
-            raise RuntimeError("Sorry, something went wrong, please try later!")
+            print("Something went wrong on the spector API side .. try again")
+            return None
 
         for paper in response.json()["preds"]:
             embeddings_by_paper_id[paper["paper_id"]] = paper["embedding"]
@@ -120,7 +121,7 @@ def get_embeddings(title: str, abstract: str = None):
     abstract = abstract or title
     paper = {"paper_id": "paper", "title": title, "abstract": abstract}
     embeddings = get_embeddings_for_papers([paper])
-    return embeddings['paper']
+    return embeddings['paper'] if embeddings else None
 
 
 def load_specter_embeddings():
@@ -139,8 +140,11 @@ DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors.pq'
 document_vectors = pd.read_parquet(DOCUMENT_VECTOR_PATH)
 
 
-def find_similar_papers(search_string, num_items=10, covid_related=True):
+@lru_cache(maxsize=64)
+def find_similar_papers(search_string, num_items=10):
     vector = get_embeddings(search_string, search_string)
+    if not vector:
+        return []
     similar_indexes = SPECTOR_SIMILARITY_INDEX.get_nns_by_vector(vector, n=num_items)
     similar_cord_uids = document_vectors.iloc[similar_indexes].index.values.tolist()
     return similar_cord_uids

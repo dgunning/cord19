@@ -490,18 +490,17 @@ class ResearchPapers:
                start_date=None,
                end_date=None,
                view='html'):
-        if not self.bm25:
-            print('BM25 index does not exist .. in search.. recreating')
-            self.create_document_index()
-
-        n_results = num_results or self.num_results
-        search_terms = preprocess(search_string)
-        doc_scores = self.bm25.get_scores(search_terms)
+        from .vectors import find_similar_papers
+        #n_results = num_results or self.num_results
+        #search_terms = preprocess(search_string)
+        #doc_scores = self.bm25.get_scores(search_terms)
 
         # Get the index from the doc scores
-        ind = np.argsort(doc_scores)[::-1]
-        results = self.metadata.iloc[ind].copy()
-        results['Score'] = doc_scores[ind].round(1)
+        #ind = np.argsort(doc_scores)[::-1]
+        #results = self.metadata.iloc[ind].copy()
+        #results['Score'] = doc_scores[ind].round(1)
+        paper_ids = find_similar_papers(search_string, num_items=50)
+        results = self.metadata[self.metadata.cord_uid.isin(paper_ids)]
 
         # Filter covid related
         if covid_related:
@@ -514,11 +513,8 @@ class ResearchPapers:
         if end_date:
             results = results[results.published < end_date]
 
-        # Only include results over a minimum threshold
-        results = results[results.Score > _MINIMUM_SEARCH_SCORE]
-
         # Show only up to n_results
-        results = results.head(n_results)
+        results = results.head(num_results)
 
         # Create the final results
         results = results.drop_duplicates(subset=['title'])
@@ -579,7 +575,7 @@ class ResearchPapers:
             do_search()
 
         search_button.on_click(button_search_handler)
-        text_input.observe(text_search_handler, names='value')
+        #text_input.observe(text_search_handler, names='value')
         search_dates_slider.observe(date_handler, names='value')
         covid_related_CheckBox.observe(checkbox_handler, names='value')
 
