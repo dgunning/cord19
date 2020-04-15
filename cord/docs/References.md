@@ -14,3 +14,5 @@
 [Altair Data Visualization](https://altair-viz.github.io/)
 
 [Specter Embedding Public APIs](https://github.com/allenai/paper-embedding-public-apis)
+
+[Annoy - Approximate Nearest Neighbours](https://github.com/spotify/annoy)
