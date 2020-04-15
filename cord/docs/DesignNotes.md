@@ -1,4 +1,4 @@
-## Technical Design Notes
+## Design Notes
 
 The **CORD Research Engine** is a tool for locating research papers and surfacing insights on the **SARS-COV-2** virus
 and the disease that it causes **COVID-19**. It follows a Search Engine design metaphor, since it is a design that is

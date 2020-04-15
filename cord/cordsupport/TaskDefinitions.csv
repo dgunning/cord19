@@ -1,17 +1,17 @@
 ﻿Task,Type,TopicNo,Question,SeedQuestion
 TransmissionEnvironment,Topic,1,"Range of incubation periods for the disease in humans (and how this varies across age and health status) and how long individuals are contagious, even after recovery.",
-TransmissionEnvironment,Topic,2,"Prevalence of asymptomatic shedding and transmission (e.g., particularly children).",
-TransmissionEnvironment,Topic,3,Seasonality of transmission.,
-TransmissionEnvironment,Topic,4,"Physical science of the coronavirus (e.g., charge distribution, adhesion to hydrophilic/phobic surfaces, environmental survival to inform decontamination efforts for affected areas and provide information about viral shedding).",
-TransmissionEnvironment,Topic,5,"Persistence and stability on a multitude of substrates and sources (e.g., nasal discharge, sputum, urine, fecal matter, blood).",
+TransmissionEnvironment,Topic,2,"Prevalence of asymptomatic shedding and transmission (e.g., particularly children).",Asymptomatic or presymptomatic viral shedding and spread and transmission children
+TransmissionEnvironment,Topic,3,Seasonality of transmission.,Seasonal variation in spread or transmission or R0 temperature or humidity or climate or latitude
+TransmissionEnvironment,Topic,4,"Physical science of the coronavirus (e.g., charge distribution, adhesion to hydrophilic/phobic surfaces, environmental survival to inform decontamination efforts for affected areas and provide information about viral shedding).","Physical science of the coronavirus charge distribution, adhesion to hydrophilic hydrophobic surfaces, environmental survival"
+TransmissionEnvironment,Topic,5,"Persistence and stability on a multitude of substrates and sources (e.g., nasal discharge, sputum, urine, fecal matter, blood).","Persistence and stability on substrates and sources nasal discharge, sputum, urine, feces, stool, blood "
 TransmissionEnvironment,Topic,6,"Persistence of virus on surfaces of different materials (e,g., copper, stainless steel, plastic).",
-TransmissionEnvironment,Topic,7,Natural history of the virus and shedding of it from an infected person,
-TransmissionEnvironment,Topic,8,Implementation of diagnostics and products to improve clinical processes,
+TransmissionEnvironment,Topic,7,Natural history of the virus and shedding of it from an infected person,Viral shedding from infected persons and history or evolution of virus
+TransmissionEnvironment,Topic,8,Implementation of diagnostics and products to improve clinical processes,Diagnostic tools for clinical and health processes
 TransmissionEnvironment,Topic,9,"Disease models, including animal models for infection, disease and transmission",
 TransmissionEnvironment,Topic,10,Tools and studies to monitor phenotypic change and potential adaptation of the virus,
-TransmissionEnvironment,Topic,11,Immune response and immunity,
-TransmissionEnvironment,Topic,12,Effectiveness of movement control strategies to prevent secondary transmission in health care and community settings,
-TransmissionEnvironment,Topic,13,Effectiveness of personal protective equipment (PPE) and its usefulness to reduce risk of transmission in health care and community settings,
+TransmissionEnvironment,Topic,11,Immune response and immunity,Immune response antibody and immunity
+TransmissionEnvironment,Topic,12,Effectiveness of movement control strategies to prevent secondary transmission in health care and community settings,Movement and migration control or curfews or lock-down or lockdown to prevent secondary transmission in healthcare and community
+TransmissionEnvironment,Topic,13,Effectiveness of personal protective equipment (PPE) and its usefulness to reduce risk of transmission in health care and community settings,Personal protective equipment face masks to reduce transmission in community and healthcare
 TransmissionEnvironment,Topic,14,Role of the environment in transmission,
 RiskFactors,Topic,1,Data on potential risks factors,
 RiskFactors,Topic,2,"Smoking, pre-existing pulmonary disease",

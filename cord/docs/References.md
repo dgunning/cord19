@@ -5,7 +5,7 @@
 
 [Wikipedia - Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25)
 
-[Elastic Search switched to BM25](https://www.elastic.co/blog/practical-bm25-part-2-the-bm25-algorithm-and-its-variables)
+[Elastic Search switched to BM25 in version 5.0](https://www.elastic.co/blog/practical-bm25-part-2-the-bm25-algorithm-and-its-variables)
 
 [Gensim TextRank Summarization](https://radimrehurek.com/gensim/summarization/summariser.html)
 
