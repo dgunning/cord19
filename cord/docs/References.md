@@ -12,3 +12,5 @@
 [Creating a Good Analytics Report](https://www.kaggle.com/jpmiller/creating-a-good-analytics-report)
 
 [Altair Data Visualization](https://altair-viz.github.io/)
+
+[Specter Embedding Public APIs](https://github.com/allenai/paper-embedding-public-apis)
