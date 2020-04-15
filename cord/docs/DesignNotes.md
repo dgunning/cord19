@@ -8,19 +8,26 @@ well known by non-technical users. The tool is designed to help a user quickly a
  retrieval and presentation, and gets around the significant drawback of web tools which cannot easily produce ad-hoc reports 
  or render in multiple formats in the same way that notebooks can.
 
-There are two search indexes - a **BM25 based Search index**, and a **Similarity Index** built from document vectors.
-These two search indexes complement each other and are used for certain purposes.
+There are two search indexes - a **BM25 based Search index**, and a **Similarity Index** built from the 768 dimension 
+document vectors. These two search indexes complement each other and are used for certain purposes.
 
 ### Search Index
 
 BM25 is chosen because it is a robust, well-known set of algorithms for text search and information extract used by
 popular search engine technology. It is the default algorithm set used in **ElasticSearch**.
 
+Interestingly we found that the **BM25** search index significantly outperformed the **Specter document vectors** on normal search queries.
+However Specter vectors performed very well when comparing full documents. The reason could be that BM25 is very well tuned for short queries
+while short queries when vectorized into 768 dimensions are too sparse to be accurate. On the other hand with full document text the
+vectors have enough information in each dimension to be accurate.
+
+
 We use a simple implementation of BM25 provided by the **rank_bm25** Python library. The index is populated with the preprocessed
 and tokenized documents. Internally **rank_bm25** lemmatizes the tokens, and performs other optimizations required
 for good search performance.
  
 <br/>
+
 #### Indexing Abstracts vs Paper Content
 The CORD library provides the option of indexing the *metadata abstracts* vs indexing the *full paper content*. 
 The trade-off here is speed vs accuracy, with indexing the abstracts resulting in a load time of about a minute,
@@ -31,14 +38,13 @@ built from the vectors built on the full paper content.
 
 
 ### Similarity Index
-The similarity index is built by down-sampling the 768-dimension specter document vectors to 100 dimensions and adding them
-to an **Annoy** index. This annoy index will then return the most similar papers to a given document. 
+The similarity index is built by adding the 768-dimension specter document vectors to an **Annoy** index. 
+This annoy index will then return the most similar papers to a given document. 
 Annoy is a simple and very performant library for nearest neighbour search - originally developed at Spotify.
 
-We downsample to reduce the size of the Annoy index, and 100 dimensions gives us a 40 MB index. 
-Downsampling is done using **PCA**. We chose to use PCA over **TSNE** since it is much faster.
-In addition to downsampling to 100 dimensions, we also add **1d** and **2d** vectors. The 1d and 2d vectors are used for visualizing 
-where a paper fits in the overall vector space, in the function `papers.search_2d`. 
+In addition to the 768 dimension vector we use PCA to downsample to **1d** and **2d** vectors.
+The 1d and 2d vectors are used for visualizing where a paper fits in the overall vector space, in the function `papers.search_2d`. 
+This gives the user a nice visual context about the topic they are currently looking at
 
 <br/>
 
