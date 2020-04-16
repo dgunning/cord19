@@ -11,7 +11,7 @@ from IPython.display import display, clear_output
 from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
-from cord.core import ifnone, render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
+from cord.core import  render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
     JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify, cord_support_dir, similar_papers
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
