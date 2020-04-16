@@ -13,15 +13,11 @@ TransmissionEnvironment,Topic,11,Immune response and immunity,Immune response an
 TransmissionEnvironment,Topic,12,Effectiveness of movement control strategies to prevent secondary transmission in health care and community settings,Movement and migration control or curfews or lock-down or lockdown to prevent secondary transmission in healthcare and community
 TransmissionEnvironment,Topic,13,Effectiveness of personal protective equipment (PPE) and its usefulness to reduce risk of transmission in health care and community settings,Personal protective equipment face masks to reduce transmission in community and healthcare
 TransmissionEnvironment,Topic,14,Role of the environment in transmission,
-RiskFactors,Topic,1,Data on potential risks factors,
-RiskFactors,Topic,2,"Smoking, pre-existing pulmonary disease",
-RiskFactors,Topic,3,Co-infections (determine whether co-existing respiratory/viral infections make the virus more transmissible or virulent) and other co-morbidities,
-RiskFactors,Topic,4,Neonates and pregnant women,
-RiskFactors,Topic,5,Socio-economic and behavioral factors to understand the economic impact of the virus and whether there were differences.,
-RiskFactors,Topic,6,"Transmission dynamics of the virus, including the basic reproductive number, incubation period, serial interval, modes of transmission and environmental factors",
-RiskFactors,Topic,7,"Severity of disease, including risk of fatality among symptomatic hospitalized patients, and high-risk patient groups",
-RiskFactors,Topic,8,Susceptibility of populations,
-RiskFactors,Topic,9,Public health mitigation measures that could be effective for control,
+RiskFactors,Topic,1,Data on potential risks factors,"Risk factors ; smoking, pre-existing pulmonary disease ; Co-infections co-existing respiratory viral infections make the virus more transmissible or virulent and other co-morbidities ; Neonates and pregnancy ; Socio-economic and behavioral factors"
+RiskFactors,Topic,2,"Transmission dynamics of the virus, including the basic reproductive number, incubation period, serial interval, modes of transmission and environmental factors","Transmission dynamics of the virus, including the basic reproductive number, R0 incubation period, serial interval, modes of transmission and environmental factors"
+RiskFactors,Topic,3,"Severity of disease, including risk of fatality among symptomatic hospitalized patients, and high-risk patient groups",Severity and case fatality rate among symptomatic hospitalized patients and high risk groups
+RiskFactors,Topic,4,Susceptibility of populations,Susceptibility of different populations
+RiskFactors,Topic,5,Public health mitigation measures that could be effective for control,
 GeneticOrigin,Topic,1,Real-time tracking of whole genomes and a mechanism for coordinating the rapid dissemination of that information to inform the development of diagnostics and therapeutics and to track variations of the virus over time.,Real time tracking of genetic or genome or genomic evolution or variation or mutation or phylogenetic tree and rapid dissemination or sharing of that data or information for vaccine or treatment or therapeutics
 GeneticOrigin,Topic,2,"Access to geographic and temporal diverse sample sets to understand geographic distribution and genomic differences, and determine whether there is more than one strain in circulation. Multi-lateral agreements such as the Nagoya Protocol could be leveraged.","Access to geographic, region or country genetic samples to understand geographic and genomic differences to understand the different virus strains and mutations. Could use Nagoya"
 GeneticOrigin,Topic,3,"Evidence that livestock could be infected (e.g., field surveillance, genetic sequencing, receptor binding) and serve as a reservoir after the epidemic appears to be over. Evidence of whether farmers are infected, and whether farmers could have played a role in the origin.
