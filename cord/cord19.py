@@ -11,13 +11,12 @@ from IPython.display import display, clear_output
 from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
-from cord.core import  render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify, cord_support_dir, similar_papers
+from cord.core import render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify
 from cord.dates import add_date_diff
 from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
 from cord.text import preprocess, shorten, summarize
-from cord.vectors import show_2d_chart
-
+from cord.vectors import show_2d_chart, similar_papers
 
 _MINIMUM_SEARCH_SCORE = 2
 
@@ -295,14 +294,6 @@ class ResearchPapers:
             f'<h4>Papers similar to <span style="{style}">{original_paper.title}</span></h4>'))
         return self.display(*similar_paper_ids)
 
-    def find_in_papers(self, search_string, num_items=10):
-        from .vectors import find_similar_papers
-        paper_ids = find_similar_papers(search_string, num_items=num_items)
-        style = 'color: #008B8B; font-weight: bold; font-size: 0.9em;'
-        display(widgets.HTML(
-            f'<h4>Papers related to <span style="{style}">{search_string}</span></h4>'))
-        return self.display(*paper_ids)
-
     def show(self, *paper_ids):
         return self.display(*paper_ids)
 
@@ -495,7 +486,6 @@ class ResearchPapers:
                start_date=None,
                end_date=None,
                view='html'):
-        from .vectors import find_similar_papers
         n_results = num_results or self.num_results
         search_terms = preprocess(search_string)
         doc_scores = self.bm25.get_scores(search_terms)

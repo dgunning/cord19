@@ -1,5 +1,5 @@
 __all__ = ['is_notebook', 'is_kaggle', 'find_data_dir', 'cord_support_dir', 'render_html', 'load_template',
-           'similar_papers', 'image', 'get_docs']
+            'image', 'get_docs']
 
 import math
 import multiprocessing
@@ -12,7 +12,6 @@ from typing import Collection, Any
 import ipywidgets as widgets
 import numpy as np
 import pandas as pd
-from annoy import AnnoyIndex
 from jinja2 import Template
 from markdown import markdown
 
@@ -65,12 +64,6 @@ def cord_support_dir():
 
 def cord_cache_dir():
     return Path(find_data_dir()).parent / 'cord-cache'
-
-
-#SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
-#SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
-#SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
-from .vectors import document_vectors
 
 
 def num_cpus() -> int:
@@ -168,22 +161,6 @@ def lookup_by_sha(shas, sha_map, not_found=[]):
         if sha_value is not None:
             return sha_value
     return not_found
-
-
-def get_index(cord_uid):
-    row_match = np.where(document_vectors.index == cord_uid)
-    if len(row_match[0]) > 0:
-        return np.where(document_vectors.index == cord_uid)[0][0]
-
-
-def similar_papers(paper_id, num_items=10):
-    from .vectors import SPECTOR_SIMILARITY_INDEX
-    index = paper_id if isinstance(paper_id, int) else get_index(paper_id)
-    if not index:
-        return []
-    similar_indexes = SPECTOR_SIMILARITY_INDEX.get_nns_by_item(index, num_items)
-    similar_cord_uids = document_vectors.iloc[similar_indexes].index.values.tolist()
-    return [id for id in similar_cord_uids if not id == paper_id]
 
 
 def image(image_path):
