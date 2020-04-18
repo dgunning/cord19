@@ -283,6 +283,11 @@ class ResearchPapers:
         self.display(*similar_paper_ids)
 
     def similar_to(self, paper_id):
+        """
+        Find and displays papers similar to the paper
+        :param paper_id: the cord_uid
+        :return: None
+        """
         similar_paper_ids = similar_papers(paper_id)
         original_paper = self[paper_id]
         style = 'color: #008B8B; font-weight: bold; font-size: 0.9em;'

@@ -7,14 +7,14 @@ import pandas as pd
 from IPython.display import display
 import requests
 from typing import Dict, List
-from .core import cord_support_dir, find_data_dir, cord_cache_dir
+from .core import cord_support_dir, find_data_dir
 
 SPECTER_URL = "https://model-apis.semanticscholar.org/specter/v1/invoke"
 MAX_BATCH_SIZE = 16
 RANDOM_STATE = 42
-
-SPECTOR_PATH = Path(find_data_dir()) / f"cord19_specter_embeddings_2020-04-10/cord19_specter_embeddings_2020-04-10.csv"
-SPECTOR_DIMENSIONS = 768
+NUM_ANNOY_TREES = 30
+SPECTOR_CSV_PATH = Path(find_data_dir()) / f"cord_19_embeddings_4_17/cord_19_embeddings_4_17.csv"
+DOCUMENT_VECTOR_LENGTH = 192
 
 
 def kmean_labels(docvectors, n_clusters=6, random_state=RANDOM_STATE):
@@ -23,28 +23,6 @@ def kmean_labels(docvectors, n_clusters=6, random_state=RANDOM_STATE):
     kmeans = KMeans(n_clusters=n_clusters,
                     random_state=random_state).fit(docvectors)
     return kmeans.labels_
-
-
-def tsne_embeddings(docvectors, dimensions=2):
-    print(f'Creating {dimensions}D  embeddings')
-    from sklearn.manifold import TSNE
-    tsne = TSNE(verbose=1,
-                perplexity=15,
-                early_exaggeration=24,
-                n_components=dimensions,
-                n_jobs=8,
-                random_state=RANDOM_STATE,
-                learning_rate=600)
-    embeddings = tsne.fit_transform(docvectors)
-    return embeddings
-
-
-@lru_cache(maxsize=4)
-def tsne_model(dimension):
-    print('Loading TSNE model for', dimension, 'dimensions')
-    TSNE_Path = Path(cord_support_dir()) / f'TSNE{dimension}d.pickle'
-    with TSNE_Path.open('rb') as f:
-        return pickle.load(f)
 
 
 import altair as alt
@@ -128,13 +106,13 @@ def load_specter_embeddings():
     print('Loading specter embeddings')
     VECTOR_COLS = [str(i) for i in range(768)]
     COLUMNS = ['cord_uid'] + VECTOR_COLS
-    df = pd.read_csv(SPECTOR_PATH, names=COLUMNS).set_index('cord_uid')
+    df = pd.read_csv(SPECTOR_CSV_PATH, names=COLUMNS).set_index('cord_uid')
     print('Loaded embeddings of shape', df.shape)
     return df
 
 
-SPECTOR_INDEX_PATH = str((cord_cache_dir() / 'SpectorSimilarity.ann').resolve())
-SPECTOR_SIMILARITY_INDEX = AnnoyIndex(SPECTOR_DIMENSIONS, 'angular')
+SPECTOR_INDEX_PATH = str((cord_support_dir() / 'DocumentIndex192.ann').resolve())
+SPECTOR_SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
 SPECTOR_SIMILARITY_INDEX.load(SPECTOR_INDEX_PATH)
 DOCUMENT_VECTOR_PATH = cord_support_dir() / f'DocumentVectors.pq'
 document_vectors = pd.read_parquet(DOCUMENT_VECTOR_PATH)

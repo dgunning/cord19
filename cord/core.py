@@ -67,9 +67,9 @@ def cord_cache_dir():
     return Path(find_data_dir()).parent / 'cord-cache'
 
 
-SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
-SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
-SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
+#SIMILARITY_INDEX_PATH = str((cord_support_dir() / 'PaperSimilarity.ann').resolve())
+#SIMILARITY_INDEX = AnnoyIndex(DOCUMENT_VECTOR_LENGTH, 'angular')
+#SIMILARITY_INDEX.load(SIMILARITY_INDEX_PATH)
 from .vectors import document_vectors
 
 
