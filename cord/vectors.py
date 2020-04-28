@@ -132,7 +132,6 @@ def load_specter_embeddings():
 
 
 SPECTOR_INDEX_PATH = str((cord_support_dir() / config.annoy_index_path).resolve())
-print(SPECTOR_INDEX_PATH)
 SPECTOR_SIMILARITY_INDEX = AnnoyIndex(config.document_vector_length, 'angular')
 SPECTOR_SIMILARITY_INDEX.load(SPECTOR_INDEX_PATH)
 DOCUMENT_VECTOR_PATH = cord_support_dir() / config.document_vector_path
