@@ -9,13 +9,14 @@ from pathlib import Path, PurePath
 import pickle
 from .text import preprocess
 import ipywidgets as widgets
-from typing import Dict
+from typing import Dict, List
 from gensim.corpora import Dictionary
 import time
 
 _JSON_CATALOG_SAVEFILE = 'JsonCatalog'
 PDF_JSON = 'pdf_json'
 PMC_JSON = 'pmc_json'
+
 
 def get_text_sections(paper_json, text_key) -> Dict:
     """
@@ -81,6 +82,65 @@ def get_authors(paper_json, include_affiliation=False):
                 for a in paper_json['metadata']['authors']]
     else:
         return [author_name(a) for a in paper_json['metadata']['authors']]
+
+
+def get_pdf_json_paths(metadata: str, data_path: str) -> pd.Series:
+    """
+    :param metadata: The CORD Research Metadata
+    :param data_path: The path to the CORD data
+    :return: a Series containing the PDF JSON paths
+    """
+    def path_fn(full_text_file, sha):
+        if sha and isinstance(sha, str) and isinstance(full_text_file, str):
+                return Path(data_path) / full_text_file / full_text_file / PDF_JSON / f'{sha}.json'
+
+    sha_paths = metadata.apply(lambda m: [path_fn(m.full_text_file, sha.strip()) for sha in m.sha.split(';')]
+                                                        if m.has_pdf_parse else np.nan, axis=1)
+    return sha_paths
+
+
+def get_first_json(jsons: List):
+    if isinstance(jsons, list) and len(jsons) > 0:
+        return jsons[0]
+    return jsons
+
+
+def get_pmcid_json_paths(metadata: pd.DataFrame, data_path: str) -> pd.Series:
+    """
+    :param metadata: The CORD Research Metadata
+    :param data_path: The path to the CORD data
+    :return: a series containing the paths to the PMC JSONS .. will contain nans
+    """
+    def path_fn(full_text_file, pmcid):
+        if pmcid and isinstance(pmcid, str) and isinstance(full_text_file, str):
+            pmcid_path= Path(data_path) / full_text_file / full_text_file / PMC_JSON / f'{pmcid}.xml.json'
+            if pmcid_path.exists():
+                return pmcid_path
+        return np.nan
+    pmc_paths = metadata.apply(lambda m: path_fn(m.full_text_file, m.pmcid), axis=1)
+    return pmc_paths
+
+
+def get_json_paths(metadata: pd.DataFrame, data_path: str, first=True, tolist=False) -> pd.Series:
+    """
+    :param metadata: The CORD Research Metadata
+    :param data_path: The path to the CORD data
+    :return: a series containing the paths to the JSONS .. will contain nans
+    """
+    has_pmc = metadata.has_pmc_xml_parse
+    paths_df = metadata[['has_pmc_xml_parse']].copy()
+    paths_df.loc[has_pmc, 'json_path'] = get_pmcid_json_paths(metadata.loc[paths_df.has_pmc_xml_parse], data_path)
+    paths_df.loc[~has_pmc, 'json_path'] = get_pdf_json_paths(metadata.loc[~paths_df.has_pmc_xml_parse],data_path)
+
+    if tolist:
+        if first:
+            paths_df.loc[~has_pmc, 'json_path'] = paths_df.loc[~has_pmc, 'json_path'].apply(get_first_json)
+            return paths_df.json_path.dropna().tolist()
+        else:
+            return paths_df.loc[has_pmc, 'json_path'].tolist() + \
+                [p for lst in paths_df.loc[~has_pmc, 'json_path'].dropna().tolist() for p in lst]
+    else:
+        return paths_df.json_path.apply(get_first_json)
 
 
 class JsonPaper:
@@ -165,6 +225,18 @@ def load_text_body_from_file(json_path):
     return sha, body_text, authors
 
 
+def load_text(json_path):
+    """
+    Load the text from the Json file
+    :param json_path:
+    :return: the text body of the json file
+    """
+    with json_path.open('r') as f:
+        json_content = json.load(f)
+        body_text = get_text(json_content, 'body_text')
+    return body_text
+
+
 def load_tokens_from_file(json_path):
     sha, text, authors = load_text_body_from_file(json_path)
     return sha, preprocess(text), authors
@@ -237,6 +309,29 @@ def load_json_cache(catalog):
     print('Loaded', catalog, 'json cache in', int(tock - tick), 'seconds')
     return df
 
+
+def get_tokens(cord_path):
+    cord_uid, path = cord_path
+    if isinstance(path, Path):
+        tokens = preprocess(load_text(path))
+        return cord_uid, tokens
+    return cord_uid, np.nan
+
+
+def get_token_df(metadata: pd.DataFrame, data_path:Path) -> pd.DataFrame:
+    """
+    This create a dataframe with the index_tokens
+    :param metadata:
+    :param data_path:
+    :return:
+    """
+    catalog_paths = metadata.copy()
+    catalog_paths['json_path'] = get_json_paths(catalog_paths, data_path)
+    catalog_paths = catalog_paths[['cord_uid', 'json_path']]
+    cord_paths = catalog_paths.to_records(index=False)
+    cord_tokens = parallel(get_tokens, cord_paths)
+    token_df = pd.DataFrame(cord_tokens, columns=['cord_uid', 'index_tokens'])
+    return token_df.dropna()
 
 class JsonCatalog:
 

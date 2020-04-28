@@ -12,9 +12,10 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, lookup_by_sha, listify
+    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, listify
 from cord.dates import add_date_diff
-from cord.jsonpaper import load_json_paper, load_json_texts, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON
+from cord.jsonpaper import load_json_paper, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON, \
+    get_json_paths, get_token_df
 from cord.text import preprocess, shorten, summarize
 from cord.vectors import show_2d_chart, similar_papers
 
@@ -107,7 +108,8 @@ def fill_nulls(data):
 def rename_publish_time(data):
     return data.rename(columns={'publish_time': 'published'})
 
-COVID_TERMS = ['covid', 'sars-?n?cov-?2','2019-ncov', 'novel coronavirus', 'sars coronavirus 2']
+
+COVID_TERMS = ['covid', 'sars-?n?cov-?2', '2019-ncov', 'novel coronavirus', 'sars coronavirus 2']
 COVID_SEARCH = f".*({'|'.join(COVID_TERMS)})"
 NOVEL_CORONAVIRUS = '.*novel coronavirus'
 WUHAN_OUTBREAK = 'wuhan'
@@ -154,8 +156,8 @@ def tag_sars(data):
 
 def apply_tags(data):
     print('Applying tags to metadata')
-    data = data.pipe(tag_covid)\
-        .pipe(tag_virus)\
+    data = data.pipe(tag_covid) \
+        .pipe(tag_virus) \
         .pipe(tag_coronavirus) \
         .pipe(tag_sars)
     return data
@@ -173,8 +175,27 @@ def clean_metadata(metadata):
         .pipe(apply_tags)
 
 
-def get_json_path(data_path, text_path, sha):
-    return Path(data_path) / text_path / text_path / f'{sha}.json'
+def get_json_path(data_path, full_text_file, sha, pmcid):
+    if pmcid and isinstance(pmcid, str):
+        return Path(data_path) / full_text_file / full_text_file / PMC_JSON / f'{pmcid}.xml.json'
+    elif sha and isinstance(sha, str):
+        return Path(data_path) / full_text_file / full_text_file / PDF_JSON / f'{sha}.json'
+
+
+def get_pdf_json_path(data_path, full_text_file, sha):
+    """
+    :return: The path to the json file if the sha is present
+    """
+    if sha and isinstance(sha, str):
+        return Path(data_path) / full_text_file / full_text_file / PDF_JSON / f'{sha}.json'
+
+
+def get_pmcid_json_path(data_path, full_text_file, pmcid):
+    """
+    :return: the path to the json file if the pmcid json is available
+    """
+    if pmcid and isinstance(pmcid, str):
+        return Path(data_path) / full_text_file / full_text_file / PMC_JSON / f'{pmcid}.xml.json'
 
 
 def _get_bm25Okapi(index_tokens):
@@ -184,44 +205,17 @@ def _get_bm25Okapi(index_tokens):
     return BM25Okapi(index_tokens.tolist())
 
 
-def _set_index_from_text(metadata, data_dir):
+def _set_index_from_text(metadata, data_path):
     print('Creating the BM25 index from the text contents of the papers')
     for catalog in JSON_CATALOGS:
         catalog_idx = metadata.full_text_file == catalog
-        metadata_papers = metadata.loc[catalog_idx, ['sha', 'pmcid']].copy().reset_index()
-
-        # Load the json catalog
         if json_cache_exists():
-            json_papers = load_json_cache(catalog)
+            json_tokens = load_json_cache(catalog).set_index('cord_uid')
         else:
-            json_papers = load_json_texts(json_dirs=catalog, tokenize=True)
-
-        print('Json document tokens loaded from cache')
-        # New since April 4th - some json files are in PMCXXXX.xml.json files so we need the PCMID
-        json_papers['pmcid'] = json_papers.sha.str.extract('(PMC[0-9]+)\.xml')
-        json_papers.loc[~json_papers.pmcid.isnull(), 'sha'] = np.nan
-
-        # Create the sha lookup dict
-        sha_token_dict = json_papers.loc[~json_papers.sha.isnull(),
-                                        ['sha', 'index_tokens']].set_index('sha').to_dict()['index_tokens']
-        # Create a dataframe with the same shape and index as the metadata papers.
-        # The column index is the original index for the full metadata
-        sha_token_df = metadata_papers.merge(json_papers.dropna(subset=['sha']),
-                                             how='left', on='sha').set_index('index')
-        # Now lookup the index_tokens using the sha
-        sha_token_df['index_tokens'] = sha_token_df.sha.apply(lambda sha:
-                                                              lookup_by_sha(sha, sha_token_dict, not_found=np.nan))
-
-        # Create the pmc lookup dict, then  dataframe with the same shape and index as the metadata paper, then lookup
-        pmc_token_dict = json_papers.loc[~json_papers.pmcid.isnull(),
-                                         ['pmcid', 'index_tokens']].set_index('pmcid').to_dict()['index_tokens']
-        pmc_token_df = metadata_papers.merge(json_papers.dropna(subset=['pmcid']),
-                                             how='left', on='pmcid').set_index('index')
-        pmc_token_df['index_tokens'] = pmc_token_df.pmcid.apply(lambda sha:
-                                                                lookup_by_sha(sha, pmc_token_dict, not_found=np.nan))
-
-        # Now set the index tokens
-        metadata.loc[catalog_idx, 'index_tokens'] = sha_token_df.index_tokens.fillna(pmc_token_df.index_tokens)
+            json_tokens = get_token_df(metadata.loc[catalog_idx], data_path)
+        token_lookup = json_tokens.to_dict()['index_tokens']
+        metadata.loc[catalog_idx, 'index_tokens'] = \
+            metadata.loc[catalog_idx, 'cord_uid'].apply(lambda c: token_lookup.get(c, np.nan))
 
     # If the index tokens are still null .. use the abstracts
     null_tokens = metadata.index_tokens.isnull()
@@ -259,7 +253,7 @@ class ResearchPapers:
             if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
                 tick = time.time()
                 _set_index_from_text(self.metadata, data_dir)
-                print("Finished indexing in", int(time.time()-tick), 'seconds')
+                print("Finished indexing in", int(time.time() - tick), 'seconds')
             else:
                 print('Creating the BM25 index from the abstracts of the papers')
                 print('Use index="text" if you want to index the texts of the paper instead')
@@ -310,8 +304,10 @@ class ResearchPapers:
                           'when': paper.metadata.when,
                           'cord_uid': paper.cord_uid})
         df = pd.DataFrame(_recs).sort_values(['published'], ascending=False).drop(columns=['published'])
+
         def highlight_cols(s):
             return 'font-size: 1.1em; color: #008B8B; font-weight: bold'
+
         return df.style.applymap(highlight_cols, subset=pd.IndexSlice[:, ['title']]).hide_index()
 
     def create_document_index(self):
@@ -327,9 +323,7 @@ class ResearchPapers:
         print('Finished Indexing in', round(tock - tick, 0), 'seconds')
 
     def get_json_paths(self):
-        return self.metadata.apply(lambda d:
-                                   np.nan if not d.has_text else get_json_path(self.data_path, d.full_text_file, d.sha),
-                                   axis=1)
+        return get_json_paths(self.metadata, self.data_path)
 
     def describe(self):
         cols = [col for col in self.metadata if not col in ['sha', 'index_tokens']]
@@ -416,14 +410,14 @@ class ResearchPapers:
 
     def get_summary(self):
         summary_df = pd.DataFrame({'Papers': [len(self.metadata)],
-                           'Oldest': [self.metadata.published.min()],
-                           'Newest': [self.metadata.published.max()],
-                           'SARS-COV-2': [self.metadata.covid_related.sum()],
-                           'SARS': [self.metadata.sars.sum()],
-                           'Coronavirus': [self.metadata.coronavirus.sum()],
-                           'Virus': [self.metadata.virus.sum()],
-                           'Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
-                          index=[''])
+                                   'Oldest': [self.metadata.published.min()],
+                                   'Newest': [self.metadata.published.max()],
+                                   'SARS-COV-2': [self.metadata.covid_related.sum()],
+                                   'SARS': [self.metadata.sars.sum()],
+                                   'Coronavirus': [self.metadata.coronavirus.sum()],
+                                   'Virus': [self.metadata.virus.sum()],
+                                   'Antivirals': [self.metadata.antivirals.apply(lambda a: len(a) > 0).sum()]},
+                                  index=[''])
         summary_df.Newest = summary_df.Newest.fillna('')
         summary_df.Oldest = summary_df.Oldest.fillna('')
         return summary_df
@@ -473,10 +467,10 @@ class ResearchPapers:
         return abstract_tokens
 
     def search_2d(self, search_string,
-               num_results=25,
-               covid_related=False,
-               start_date=None,
-               end_date=None):
+                  num_results=25,
+                  covid_related=False,
+                  start_date=None,
+                  end_date=None):
         search_results = self.search(search_string, num_results, covid_related, start_date, end_date)
         show_2d_chart(search_results.results, query=search_string)
 
@@ -494,8 +488,8 @@ class ResearchPapers:
         ind = np.argsort(doc_scores)[::-1]
         results = self.metadata.iloc[ind].copy()
         results['Score'] = doc_scores[ind].round(1)
-        #paper_ids = find_similar_papers(search_string, num_items=50)
-        #results = self.metadata[self.metadata.cord_uid.isin(paper_ids)]
+        # paper_ids = find_similar_papers(search_string, num_items=50)
+        # results = self.metadata[self.metadata.cord_uid.isin(paper_ids)]
 
         # Filter covid related
         if covid_related:
@@ -552,7 +546,8 @@ class ResearchPapers:
             if search_terms and len(search_terms) >= 4:
                 start_date, end_date = search_dates_slider.value
                 self._search_papers(output=output, SearchTerms=search_terms, num_results=num_results, view=view,
-                                    start_date=start_date, end_date=end_date, covid_related=covid_related_CheckBox.value)
+                                    start_date=start_date, end_date=end_date,
+                                    covid_related=covid_related_CheckBox.value)
 
         def button_search_handler(btn):
             with output:
@@ -603,7 +598,7 @@ class Paper:
     def __init__(self, item, data_path):
         if isinstance(item, pd.DataFrame):
             # convert to a series
-            item = item.T.iloc[:,0]
+            item = item.T.iloc[:, 0]
 
         self.metadata = item
         self.sha = item.sha
@@ -729,7 +724,7 @@ class SearchResults:
                      'summary': shorten(summarize(rec['abstract']), 500),
                      'when': rec['when'],
                      'url': rec['url'],
-                     'cord_uid' : rec['cord_uid'],
+                     'cord_uid': rec['cord_uid'],
                      'is_kaggle': is_kaggle()
                      }
                     for rec in search_results.to_dict('records')]
