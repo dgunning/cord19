@@ -120,11 +120,12 @@ def add(cat1, cat2):
 
 
 def describe_column(series):
-    col_counts = series.describe().loc[['count', 'unique', 'top']]
-    col_counts.loc['null'] = series.isnull().sum()
-    col_counts['duplicate'] = series.dropna().duplicated().sum()
-    df = col_counts.to_frame().T
-    df = df[['count', 'null', 'unique', 'duplicate', 'top']] \
+    desc_cols = ['count', 'null', 'unique', 'duplicate', 'top']
+    col_desc = series.describe()
+    col_desc.loc['null'] = series.isnull().sum()
+    col_desc['duplicate'] = series.dropna().duplicated().sum()
+    df = col_desc.to_frame().T
+    df = df[[col for col in desc_cols if col in df]] \
         .rename(columns={'count': 'non-null', 'top': 'most common'}).T
     return df
 
