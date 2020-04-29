@@ -602,20 +602,20 @@ class Paper:
 
         self.metadata = item
         self.sha = item.sha
+        self.pmcid = item.pmcid
         self.cord_uid = item.cord_uid
         self.catalog = item.full_text_file
         self.data_path = data_path
         self.has_pmc = self.metadata.pmcid
 
     def get_json_paper(self):
-        if self.catalog and self.sha:
-            sub_path = PMC_JSON if self.metadata.has_pmc_xml_parse else PDF_JSON
-            json_path = self.data_path / self.catalog / self.catalog / sub_path / f'{self.sha}.json'
-            if json_path.exists():
-                return load_json_paper(json_path)
+        if self.metadata.has_pmc_xml_parse and self.pmcid and isinstance(self.pmcid, str):
+            return self.get_pmc_json()
+        elif self.metadata.has_pdf_parse and self.sha and isinstance(self.sha, str):
+            return self.get_sha_json()
 
     def get_sha_path(self):
-        if self.metadata.full_text_file and self.sha:
+        if self.metadata.has_pdf_parse and self.sha and isinstance(self.sha, str):
             return self.data_path / self.metadata.full_text_file / \
                    self.metadata.full_text_file / PDF_JSON / f'{self.sha}.json'
 
@@ -635,8 +635,8 @@ class Paper:
             return load_json_paper(path)
 
     @property
-    def doi(self):
-        return self.metadata.doi
+    def url(self):
+        return self.metadata.url
 
     @property
     def html(self):
