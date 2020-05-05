@@ -243,33 +243,68 @@ def create_annoy_index(document_vectors):
 
 class ResearchPapers:
 
-    def __init__(self, metadata, data_dir='data', index='abstract', view='html'):
+    def __init__(self, metadata: pd.DataFrame, bm25_index: BM25Okapi = None, data_dir='data', index='abstract',
+                 view='html'):
         self.data_path = Path(data_dir)
         self.num_results = 10
         self.view = view
         self.metadata = metadata
-        if 'index_tokens' not in metadata:
-            print('\nIndexing research papers')
-            if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
-                tick = time.time()
-                _set_index_from_text(self.metadata, data_dir)
-                print("Finished indexing in", int(time.time() - tick), 'seconds')
-            else:
-                print('Creating the BM25 index from the abstracts of the papers')
-                print('Use index="text" if you want to index the texts of the paper instead')
-                tick = time.time()
-                self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
-                tock = time.time()
-                print('Finished Indexing in', round(tock - tick, 0), 'seconds')
 
-        # Create BM25 search index
-        self.bm25 = _get_bm25Okapi(self.metadata.index_tokens)
+        if bm25_index is None:
+            if 'index_tokens' not in metadata:
+                print('\nIndexing research papers')
+                if any([index == t for t in ['text', 'texts', 'content', 'contents']]):
+                    tick = time.time()
+                    _set_index_from_text(self.metadata, data_dir)
+                    print("Finished indexing in", int(time.time() - tick), 'seconds')
+                else:
+                    print('Creating the BM25 index from the abstracts of the papers')
+                    print('Use index="text" if you want to index the texts of the paper instead')
+                    tick = time.time()
+                    self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
+                    tock = time.time()
+                    print('Finished Indexing in', round(tock - tick, 0), 'seconds')
 
-        if 'antivirals' not in self.metadata:
-            # Add antiviral column
-            self.metadata['antivirals'] = self.metadata.index_tokens \
-                .apply(lambda t:
-                       ','.join([token for token in t if token.endswith('vir')]))
+                if 'antivirals' not in self.metadata:
+                    # Add antiviral column
+                    self.metadata['antivirals'] = self.metadata.index_tokens \
+                        .apply(lambda t:
+                               ','.join([token for token in t if token.endswith('vir')]))
+            # Create BM25 search index
+            self.bm25 = _get_bm25Okapi(self.metadata.index_tokens)
+        else:
+            self.bm25 = bm25_index
+
+    @staticmethod
+    def load_metadata(data_path=None):
+        if not data_path:
+            data_path = find_data_dir()
+
+        print('Loading metadata from', data_path)
+        metadata_path = PurePath(data_path) / 'metadata.csv'
+        dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
+        renames = {'source_x': 'source', 'has_full_text': 'has_text'}
+        metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
+                               parse_dates=['publish_time']).rename(columns=renames)
+        metadata = clean_metadata(metadata)
+        return metadata
+
+    @classmethod
+    def load(cls, data_dir=None, index=None):
+        if data_dir:
+            data_path = Path(data_dir) / CORD_CHALLENGE_PATH
+        else:
+            data_path = find_data_dir()
+        metadata = cls.load_metadata(data_path)
+        return cls(metadata, data_dir=data_path, index=index)
+
+    @classmethod
+    def restore(cls, storage_path='storage'):
+        index_path = Path(storage_path) / 'BM25IndexText.pq'
+        with index_path.open('rb') as f:
+            index = pickle.load(f)
+        metadata = pd.read_parquet(PurePath('storage') / 'MetadataAbstracts.pq')
+        return cls(metadata=metadata, bm25_index=index)
 
     def show_similar(self, paper_id):
         similar_paper_ids = similar_papers(paper_id)
@@ -426,29 +461,6 @@ class ResearchPapers:
         display_cols = ['title', 'abstract', 'journal', 'authors', 'published', 'when']
         return render_html('ResearchPapers', summary=self.get_summary()._repr_html_(),
                            research_papers=self.metadata[display_cols]._repr_html_())
-
-    @staticmethod
-    def load_metadata(data_path=None):
-        if not data_path:
-            data_path = find_data_dir()
-
-        print('Loading metadata from', data_path)
-        metadata_path = PurePath(data_path) / 'metadata.csv'
-        dtypes = {'Microsoft Academic Paper ID': 'str', 'pubmed_id': str}
-        renames = {'source_x': 'source', 'has_full_text': 'has_text'}
-        metadata = pd.read_csv(metadata_path, dtype=dtypes, low_memory=False,
-                               parse_dates=['publish_time']).rename(columns=renames)
-        metadata = clean_metadata(metadata)
-        return metadata
-
-    @classmethod
-    def load(cls, data_dir=None, index=None):
-        if data_dir:
-            data_path = Path(data_dir) / CORD_CHALLENGE_PATH
-        else:
-            data_path = find_data_dir()
-        metadata = cls.load_metadata(data_path)
-        return cls(metadata, data_path, index=index)
 
     @staticmethod
     def from_pickle(save_dir='data'):
