@@ -16,4 +16,3 @@ annoy
 ipywidgets>=7.5.1
 markdown>=3.2.1
 Pygments>=2.6.1
-azure-storage
