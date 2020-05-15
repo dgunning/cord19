@@ -121,24 +121,27 @@ def get_pmcid_json_paths(metadata: pd.DataFrame, data_path: str) -> pd.Series:
     return pmc_paths
 
 
-def get_json_paths(metadata: pd.DataFrame, data_path: str, first=True, tolist=False) -> pd.Series:
+def get_json_paths(metadata: pd.DataFrame, data_path, first=True, tolist=False) -> pd.Series:
     """
     :param metadata: The CORD Research Metadata
     :param data_path: The path to the CORD data
     :return: a series containing the paths to the JSONS .. will contain nans
     """
-    has_pmc = metadata.has_pmc_xml_parse
-    paths_df = metadata[['has_pmc_xml_parse']].copy()
-    paths_df.loc[has_pmc, 'json_path'] = get_pmcid_json_paths(metadata.loc[paths_df.has_pmc_xml_parse], data_path)
-    paths_df.loc[~has_pmc, 'json_path'] = get_pdf_json_paths(metadata.loc[~paths_df.has_pmc_xml_parse],data_path)
+    paths_df = metadata[['source']].copy()
+    data_path = Path(data_path)
+
+    def path_fn(path):
+        if isinstance(path, str):
+            return [data_path / p.strip() for p in path.split(';')]
+        return np.nan
+    paths_df['json_path'] = metadata.pmc_json_files.fillna(metadata.pdf_json_files).apply(path_fn)
 
     if tolist:
         if first:
-            paths_df.loc[~has_pmc, 'json_path'] = paths_df.loc[~has_pmc, 'json_path'].apply(get_first_json)
-            return paths_df.json_path.dropna().tolist()
+            paths_df.json_path.apply(get_first_json).dropna().tolist()
         else:
-            return paths_df.loc[has_pmc, 'json_path'].tolist() + \
-                [p for lst in paths_df.loc[~has_pmc, 'json_path'].dropna().tolist() for p in lst]
+            path_list = paths_df.json_path.apply(lambda p: [a.strip() for a in p.split(';')]).tolist()
+            return [a for ps in path_list for a in ps]
     else:
         return paths_df.json_path.apply(get_first_json)
 

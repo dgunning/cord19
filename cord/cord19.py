@@ -12,10 +12,10 @@ from rank_bm25 import BM25Okapi
 from requests import HTTPError
 
 from cord.core import render_html, show_common, describe_dataframe, is_kaggle, CORD_CHALLENGE_PATH, \
-    JSON_CATALOGS, find_data_dir, SARS_DATE, SARS_COV_2_DATE, listify
+    find_data_dir, SARS_DATE, SARS_COV_2_DATE, listify
 from cord.dates import add_date_diff
-from cord.jsonpaper import load_json_paper, json_cache_exists, load_json_cache, PDF_JSON, PMC_JSON, \
-    get_json_paths, get_token_df
+from cord.jsonpaper import load_json_paper, PDF_JSON, PMC_JSON, \
+    get_json_paths
 from cord.text import preprocess, shorten, summarize
 from cord.vectors import show_2d_chart, similar_papers
 
@@ -206,22 +206,33 @@ def _get_bm25Okapi(index_tokens):
 
 
 def _set_index_from_text(metadata, data_path):
+    from gensim.corpora import Dictionary
+    from cord.jsonpaper import get_json_cache_dir
     print('Creating the BM25 index from the text contents of the papers')
-    for catalog in JSON_CATALOGS:
-        catalog_idx = metadata.full_text_file == catalog
-        if json_cache_exists():
-            json_tokens = load_json_cache(catalog).set_index('cord_uid')
-        else:
-            json_tokens = get_token_df(metadata.loc[catalog_idx], data_path)
+    json_cache_dir = get_json_cache_dir()
+    file_paths = [PurePath(p) for p in json_cache_dir.glob(f'jsoncache_*.pq')]
+    for cache_path in file_paths:
+        print('Loading json cache file', cache_path.stem)
+        json_cache = pd.read_parquet(cache_path)
+        part_no = cache_path.stem[len('jsoncache_'):]
+        dictionary_path = json_cache_dir / f'jsoncache_{part_no}.dict'
+        dictionary = Dictionary.load((str(dictionary_path.resolve())))
+        json_cache['index_tokens'] \
+            = json_cache.token_int.apply(lambda token_int: [dictionary[ti] for ti in token_int])
+        json_tokens = json_cache.drop(columns=['token_int']).set_index('cord_uid')
         token_lookup = json_tokens.to_dict()['index_tokens']
-        metadata.loc[catalog_idx, 'index_tokens'] = \
-            metadata.loc[catalog_idx, 'cord_uid'].apply(lambda c: token_lookup.get(c, np.nan))
+        if 'index_tokens' not in metadata:
+            metadata['index_tokens'] = metadata['cord_uid'].apply(lambda c: token_lookup.get(c, np.nan))
+        else:
+            need_tokens = metadata.index_tokens.isnull()
+            metadata.loc[need_tokens, 'index_tokens'] = \
+                metadata.loc[need_tokens, 'cord_uid'].apply(lambda c: token_lookup.get(c, np.nan))
 
     # If the index tokens are still null .. use the abstracts
     null_tokens = metadata.index_tokens.isnull()
     print('There are', null_tokens.sum(), 'papers that will be indexed using the abstract instead of the contents')
     metadata.loc[null_tokens, 'index_tokens'] = metadata.loc[null_tokens].abstract.apply(preprocess)
-    missing_index_tokens = len(metadata.loc[catalog_idx & metadata.index_tokens.isnull()])
+    missing_index_tokens = len(metadata.loc[metadata.index_tokens.isnull()])
     if missing_index_tokens > 0:
         print('There still are', missing_index_tokens, 'index tokens')
 
@@ -616,33 +627,28 @@ class Paper:
         self.sha = item.sha
         self.pmcid = item.pmcid
         self.cord_uid = item.cord_uid
-        self.catalog = item.full_text_file
         self.data_path = data_path
-        self.has_pmc = self.metadata.pmcid
+        self.pmc_json_files = item.pmc_json_files
+        self.pdf_json_files = item.pdf_json_files
 
     def get_json_paper(self):
-        if self.metadata.has_pmc_xml_parse and self.pmcid and isinstance(self.pmcid, str):
+        if isinstance(self.metadata.pmc_json_files, str):
             return self.get_pmc_json()
-        elif self.metadata.has_pdf_parse and self.sha and isinstance(self.sha, str):
-            return self.get_sha_json()
+        elif isinstance(self.metadata.pdf_json_files, str):
+            return self.get_pdf_json()
 
-    def get_sha_path(self):
-        if self.metadata.has_pdf_parse and self.sha and isinstance(self.sha, str):
-            return self.data_path / self.metadata.full_text_file / \
-                   self.metadata.full_text_file / PDF_JSON / f'{self.sha}.json'
+    def get_pdf_json_path(self):
+        if self.metadata.pdf_json_files:
+            return self.data_path / self.pdf_json_files.partition(';')[0]
 
-    def get_sha_json(self):
-        path = self.get_sha_path()
+    def get_pdf_json(self):
+        path = self.get_pdf_json_path()
         if path and path.exists():
             return load_json_paper(path)
 
-    def get_pmc_path(self):
-        if self.metadata.full_text_file and self.metadata.pmcid:
-            return self.data_path / self.metadata.full_text_file / \
-                   self.metadata.full_text_file / PMC_JSON / f'{self.metadata.pmcid}.xml.json'
-
     def get_pmc_json(self):
-        path = self.get_pmc_path()
+        path = self.data_path / self.metadata.pmc_json_files
+        print(path, path.exists())
         if path and path.exists():
             return load_json_paper(path)
 
