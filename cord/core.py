@@ -48,11 +48,21 @@ def is_kaggle():
 
 
 def find_data_dir():
+    '''
+    Find the CORD-research-data directory
+    :return: the directory that contains the CORD research paper files
+    '''
+    # Option 1: Look in the current directory
+    cord_dir = Path(CORD_CHALLENGE_PATH)
+    if cord_dir.exists():
+        return str(cord_dir)
+    # Option 2: Look for a directory that contains the CORD research papers
     input_dir = KAGGLE_INPUT if is_kaggle() else NON_KAGGLE_DATA_DIR
     input_path = Path() / input_dir
     if input_path.exists():
         return str(input_path / CORD_CHALLENGE_PATH)
     else:
+        # Option 3: Look in the parent directory
         input_path = Path('..') / input_dir
         if input_path.exists():
             return str(input_path / CORD_CHALLENGE_PATH)

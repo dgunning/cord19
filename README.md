@@ -2,17 +2,28 @@
 This repo contains code and notebooks for the [COVID-19 Open Research Dataset Challenge (CORD-19)](https://www.kaggle.com/allen-institute-for-ai/CORD-19-research-challenge)
 on kaggle
 
-# Installing
+## Using the library
+### On Kaggle
 
-```{bash}
-pip install git+https://github.com/dgunning/cord19.git
-```
+Clone and modify the [Kaggle notebook](https://www.kaggle.com/dgunning/cord-research-engine-search-and-similarity)
+### Off Kaggle
+
+1. Download the data
 
 Login to **Kaggle** and download the [CORD Research Challenge data](https://www.kaggle.com/allen-institute-for-ai/CORD-19-research-challenge)
 and extract to a folder called **data**. 
 
-You can also use the [Kaggle python api](https://github.com/Kaggle/kaggle-api) to download this datatet.
+You can also use the **kaggle cli**
+``bash``
+kaggle datasets download allen-institute-for-ai/CORD-19-research-challenge
+``
+2. Install
 
+Install the library using pip
+
+```{bash}
+pip install git+https://github.com/dgunning/cord19.git
+```
 ```bash
 dir data\CORD-19-research-challenge
 ```
