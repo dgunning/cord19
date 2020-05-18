@@ -272,6 +272,7 @@ class ResearchPapers:
                     print('Creating the BM25 index from the abstracts of the papers')
                     print('Use index="text" if you want to index the texts of the paper instead')
                     tick = time.time()
+
                     self.metadata['index_tokens'] = metadata.abstract.apply(preprocess)
                     tock = time.time()
                     print('Finished Indexing in', round(tock - tick, 0), 'seconds')
@@ -311,11 +312,14 @@ class ResearchPapers:
 
     @classmethod
     def restore(cls, storage_path='storage'):
-        index_path = Path(storage_path) / 'BM25IndexText.pq'
+        tick = time.time()
+        index_path = Path(storage_path) / 'BM25IndexAbstracts.pq'
         with index_path.open('rb') as f:
             index = pickle.load(f)
         metadata = pd.read_parquet(PurePath('storage') / 'MetadataAbstracts.pq')
-        return cls(metadata=metadata, bm25_index=index)
+        papers = cls(metadata=metadata, bm25_index=index)
+        print('Loaded papers in', time.time() - tick, 'seconds')
+        return papers
 
     def show_similar(self, paper_id):
         similar_paper_ids = similar_papers(paper_id)
