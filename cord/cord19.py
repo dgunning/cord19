@@ -658,7 +658,19 @@ class Paper:
 
     @property
     def url(self):
-        return self.metadata.url
+        if not isinstance(self.metadata.url, str):
+            return None
+        for url in self.metadata.url.split(';'):
+            if not 'api.elsevier.com' in url:
+                return url.strip()
+
+    @property
+    def api_url(self):
+        if not isinstance(self.metadata.url, str):
+            return None
+        for url in self.metadata.url.split(';'):
+            if 'api.elsevier.com' in url:
+                return url.strip()
 
     @property
     def html(self):
